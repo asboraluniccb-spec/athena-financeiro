@@ -6266,7 +6266,7 @@ function aprovContarAbertos(grupoId){
   const colunas = APROV_GRUPOS[grupoId] || [];
   return colunas.reduce((sum, col) => {
     const itens = (mesD.colunas || {})[col.id] || [];
-    return sum + itens.filter(i => !i.done).length;
+    return sum + itens.length;
   }, 0);
 }
 
@@ -6348,9 +6348,9 @@ function aprovRenderCol(col){
     ${!finalizado?`
     <button class="aprov-add-btn" onclick="aprovAbrirForm('${col.id}')">＋ Adicionar</button>
     <div class="aprov-add-form" id="aprov-form-${col.id}" style="display:none">
-      <input type="text" id="aprov-nome-${col.id}" placeholder="Nome do paciente *" />
-      <input type="text" id="aprov-ficha-${col.id}" placeholder="Nº ficha (opcional)" />
-      <input type="text" id="aprov-valor-${col.id}" placeholder="Valor (opcional, ex: R$ 500,00)" />
+      <input type="text" id="aprov-nome-${col.id}" placeholder="Nome do paciente *" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('aprov-ficha-${col.id}').focus();}" />
+      <input type="text" id="aprov-ficha-${col.id}" placeholder="Nº ficha (opcional)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('aprov-valor-${col.id}').focus();}" />
+      <input type="text" id="aprov-valor-${col.id}" placeholder="Valor (opcional, ex: R$ 500,00)" onkeydown="if(event.key==='Enter'){event.preventDefault();aprovSalvarItem('${col.id}');}" />
       <div class="aprov-add-form-btns">
         <button class="aprov-save-btn" onclick="aprovSalvarItem('${col.id}')">Salvar</button>
         <button class="aprov-cancel-btn" onclick="aprovFecharForm('${col.id}')">Cancelar</button>
@@ -6370,6 +6370,7 @@ function aprovRenderRecados(){
 
   const itensHtml = recados.map((r, idx) => {
     const respostas = r.respostas || [];
+    const nResp = respostas.length;
     const respostasHtml = respostas.map((rsp, ri) => `
       <div style="display:flex;align-items:flex-start;gap:6px;padding:5px 8px;background:var(--surface2);border-radius:6px;margin-top:4px;font-size:11px">
         <span style="font-weight:700;color:var(--vinho);white-space:nowrap">${rsp.autor}:</span>
@@ -6377,6 +6378,7 @@ function aprovRenderRecados(){
         <span style="color:var(--text2);white-space:nowrap;font-size:10px">${rsp.criadoEm?new Date(rsp.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):''}</span>
         ${!finalizado?`<button onclick="aprovRecadoDelResposta(${idx},${ri})" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:12px;padding:0;line-height:1" title="Remover">×</button>`:''}
       </div>`).join('');
+    const badgeResp = nResp > 0 ? `<span style="background:#dc2626;color:#fff;border-radius:8px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:4px;vertical-align:middle">${nResp}</span>` : '';
     return `
     <div class="aprov-card ${r.done?'done':''}" style="margin-bottom:8px;flex-direction:column;align-items:flex-start;gap:4px">
       <div style="display:flex;align-items:flex-start;gap:8px;width:100%">
@@ -6390,7 +6392,13 @@ function aprovRenderRecados(){
         </div>
         ${!finalizado?`<button class="aprov-card-del" onclick="aprovRecadoDel(${idx})" title="Remover">×</button>`:''}
       </div>
-      ${respostasHtml?`<div style="width:100%;padding-left:26px">${respostasHtml}</div>`:''}
+      ${nResp>0?`
+      <div style="width:100%;padding-left:26px">
+        <button onclick="aprovToggleRespostas(${idx})" style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:0;font-family:var(--font-body);display:flex;align-items:center;gap:2px">
+          <span id="aprov-resp-chev-${idx}">▶</span> ${nResp} resposta${nResp>1?'s':''}${badgeResp}
+        </button>
+        <div id="aprov-resp-list-${idx}" style="display:none">${respostasHtml}</div>
+      </div>`:''}
       ${!finalizado&&aprovUsuario?`
       <div style="width:100%;padding-left:26px;margin-top:2px">
         <div id="aprov-resp-form-${idx}" style="display:none;gap:4px;align-items:center">
@@ -6400,7 +6408,7 @@ function aprovRenderRecados(){
           <button onclick="aprovRecadoResponder(${idx})" title="Enviar" style="background:var(--vinho);color:var(--marfim);border:none;border-radius:5px;padding:3px 7px;font-size:12px;cursor:pointer;line-height:1">↩</button>
           <button onclick="document.getElementById('aprov-resp-form-${idx}').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:5px;padding:3px 6px;font-size:11px;color:var(--text2);cursor:pointer;line-height:1">×</button>
         </div>
-        <button style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:0;font-family:var(--font-body)" onclick="document.getElementById('aprov-resp-form-${idx}').style.display='flex';document.getElementById('aprov-resp-txt-${idx}').focus()">↩ Responder</button>
+        <button style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:0;font-family:var(--font-body)" onclick="document.getElementById('aprov-resp-form-${idx}').style.display='flex';document.getElementById('aprov-resp-txt-${idx}').focus()">↩ Responder${badgeResp}</button>
       </div>`:''}
     </div>`;
   }).join('');
@@ -6417,7 +6425,7 @@ function aprovRenderRecados(){
         ${itensHtml||'<div style="font-size:11px;color:var(--text2);padding:6px 0">Nenhum recado</div>'}
         ${!finalizado?`
         <div id="aprov-recado-form" style="display:none;gap:7px;flex-direction:column;margin-top:8px">
-          <textarea id="aprov-recado-texto" rows="2" placeholder="Escreva o recado ou solicitação..." style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:11px;font-family:var(--font-body);color:var(--text);resize:vertical;width:100%;outline:none"></textarea>
+          <textarea id="aprov-recado-texto" rows="2" placeholder="Escreva o recado ou solicitação... (Ctrl+Enter para salvar)" onkeydown="if(event.key==='Enter'&&event.ctrlKey){event.preventDefault();aprovRecadoSalvar();}" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:11px;font-family:var(--font-body);color:var(--text);resize:vertical;width:100%;outline:none"></textarea>
           <div style="display:flex;gap:6px">
             <button class="aprov-save-btn" onclick="aprovRecadoSalvar()">Salvar</button>
             <button class="aprov-cancel-btn" onclick="document.getElementById('aprov-recado-form').style.display='none'">Cancelar</button>
@@ -6470,6 +6478,15 @@ function aprovRecadoDelResposta(idx, ri){
   if(!respostas) return;
   respostas.splice(ri, 1);
   aprovSalvar(); aprovRenderRecados();
+}
+
+function aprovToggleRespostas(idx){
+  const list = document.getElementById(`aprov-resp-list-${idx}`);
+  const chev = document.getElementById(`aprov-resp-chev-${idx}`);
+  if(!list) return;
+  const open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  if(chev) chev.textContent = open ? '▶' : '▼';
 }
 
 // ── CRUD colunas ──────────────────────────────────────────────────────────────
