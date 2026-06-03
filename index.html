@@ -6294,7 +6294,10 @@ function aprovRenderCol(col){
   const totalValor = itens.reduce((s,i) => s + aprovParseValor(i.valor), 0);
   const todos_ok = total > 0 && itens.every(i => i.done);
 
-  const cardsHtml = itens.map((item, idx) => `
+  const cardsHtml = itens.map((item, idx) => {
+    const dataCriacao = item.criadoEm ? new Date(item.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '';
+    const fichaData = [item.ficha?`Ficha: ${item.ficha}`:'', dataCriacao].filter(Boolean).join(' · ');
+    return `
     <div class="aprov-card ${item.done?'done':''}">
       <input type="checkbox" class="aprov-card-check"
         ${item.done?'checked':''}
@@ -6302,11 +6305,12 @@ function aprovRenderCol(col){
         onchange="aprovToggle('${col.id}',${idx},this.checked)">
       <div class="aprov-card-body">
         <div class="aprov-card-nome">${item.nome}${item.done?'<span class="aprov-card-done-tag">✓</span>':''}</div>
-        ${item.ficha?`<div class="aprov-card-ficha">Ficha: ${item.ficha}</div>`:''}
+        ${fichaData?`<div class="aprov-card-ficha">${fichaData}</div>`:''}
         ${item.valor?`<div class="aprov-card-valor">${item.valor}</div>`:''}
       </div>
       ${!finalizado?`<button class="aprov-card-del" onclick="aprovDel('${col.id}',${idx})" title="Remover">×</button>`:''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   return `
   <div class="aprov-col">
@@ -6346,18 +6350,41 @@ function aprovRenderRecados(){
   const finalizado = mesD.finalizado;
   const podeConcluir = aprovUsuario === 'Dra. Mone';
 
-  const itensHtml = recados.map((r, idx) => `
-    <div class="aprov-card ${r.done?'done':''}" style="margin-bottom:6px">
-      <input type="checkbox" class="aprov-card-check"
-        ${r.done?'checked':''}
-        ${!podeConcluir?'disabled':''}
-        onchange="aprovRecadoToggle(${idx},this.checked)">
-      <div class="aprov-card-body">
-        <div class="aprov-card-nome">${r.texto}${r.done?'<span class="aprov-card-done-tag">✓</span>':''}</div>
-        <div class="aprov-card-ficha">${r.criadoEm ? new Date(r.criadoEm).toLocaleDateString('pt-BR') : ''}</div>
+  const itensHtml = recados.map((r, idx) => {
+    const respostas = r.respostas || [];
+    const respostasHtml = respostas.map((rsp, ri) => `
+      <div style="display:flex;align-items:flex-start;gap:6px;padding:5px 8px;background:var(--surface2);border-radius:6px;margin-top:4px;font-size:11px">
+        <span style="font-weight:700;color:var(--vinho);white-space:nowrap">${rsp.autor}:</span>
+        <span style="color:var(--text);flex:1">${rsp.texto}</span>
+        <span style="color:var(--text2);white-space:nowrap;font-size:10px">${rsp.criadoEm?new Date(rsp.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):''}</span>
+        ${!finalizado?`<button onclick="aprovRecadoDelResposta(${idx},${ri})" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:12px;padding:0;line-height:1" title="Remover">×</button>`:''}
+      </div>`).join('');
+    return `
+    <div class="aprov-card ${r.done?'done':''}" style="margin-bottom:8px;flex-direction:column;align-items:flex-start;gap:4px">
+      <div style="display:flex;align-items:flex-start;gap:8px;width:100%">
+        <input type="checkbox" class="aprov-card-check" style="margin-top:2px"
+          ${r.done?'checked':''}
+          ${!podeConcluir?'disabled':''}
+          onchange="aprovRecadoToggle(${idx},this.checked)">
+        <div class="aprov-card-body" style="flex:1">
+          <div class="aprov-card-nome">${r.texto}${r.done?'<span class="aprov-card-done-tag">✓</span>':''}</div>
+          <div class="aprov-card-ficha">${r.autor?`${r.autor} · `:''}${r.criadoEm?new Date(r.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):''}</div>
+        </div>
+        ${!finalizado?`<button class="aprov-card-del" onclick="aprovRecadoDel(${idx})" title="Remover">×</button>`:''}
       </div>
-      ${!finalizado?`<button class="aprov-card-del" onclick="aprovRecadoDel(${idx})" title="Remover">×</button>`:''}
-    </div>`).join('');
+      ${respostasHtml?`<div style="width:100%;padding-left:26px">${respostasHtml}</div>`:''}
+      ${!finalizado&&aprovUsuario?`
+      <div style="width:100%;padding-left:26px;margin-top:2px">
+        <div id="aprov-resp-form-${idx}" style="display:none;gap:5px;align-items:flex-end">
+          <input type="text" id="aprov-resp-txt-${idx}" placeholder="Responder..." onkeydown="if(event.key==='Enter')aprovRecadoResponder(${idx})"
+            style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;font-family:var(--font-body);color:var(--text);outline:none">
+          <button class="aprov-save-btn" style="padding:4px 10px" onclick="aprovRecadoResponder(${idx})">↩</button>
+          <button class="aprov-cancel-btn" style="padding:4px 8px" onclick="document.getElementById('aprov-resp-form-${idx}').style.display='none'">×</button>
+        </div>
+        <button style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:0;font-family:var(--font-body)" onclick="document.getElementById('aprov-resp-form-${idx}').style.display='flex';document.getElementById('aprov-resp-txt-${idx}').focus()">↩ Responder</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
 
   wrap.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px">
@@ -6402,10 +6429,28 @@ function aprovRecadoSalvar(){
   if(!txt) return;
   if(!aprovData2[aprovMesAtivo]) return;
   if(!aprovData2[aprovMesAtivo].recados) aprovData2[aprovMesAtivo].recados = [];
-  aprovData2[aprovMesAtivo].recados.push({ texto: txt, done: false, criadoEm: new Date().toISOString() });
+  aprovData2[aprovMesAtivo].recados.push({ texto: txt, autor: aprovUsuario||'Anônimo', done: false, criadoEm: new Date().toISOString(), respostas: [] });
   aprovSalvar(); aprovRenderRecados();
   document.getElementById('aprov-recado-texto').value = '';
   document.getElementById('aprov-recado-form').style.display = 'none';
+}
+
+function aprovRecadoResponder(idx){
+  if(!aprovUsuario){ alert('Selecione o usuário ativo antes de responder.'); return; }
+  const inp = document.getElementById(`aprov-resp-txt-${idx}`);
+  const txt = inp ? inp.value.trim() : '';
+  if(!txt) return;
+  if(!aprovData2[aprovMesAtivo]?.recados?.[idx]) return;
+  if(!aprovData2[aprovMesAtivo].recados[idx].respostas) aprovData2[aprovMesAtivo].recados[idx].respostas = [];
+  aprovData2[aprovMesAtivo].recados[idx].respostas.push({ texto: txt, autor: aprovUsuario, criadoEm: new Date().toISOString() });
+  aprovSalvar(); aprovRenderRecados();
+}
+
+function aprovRecadoDelResposta(idx, ri){
+  const respostas = aprovData2[aprovMesAtivo]?.recados?.[idx]?.respostas;
+  if(!respostas) return;
+  respostas.splice(ri, 1);
+  aprovSalvar(); aprovRenderRecados();
 }
 
 // ── CRUD colunas ──────────────────────────────────────────────────────────────
