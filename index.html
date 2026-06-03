@@ -493,6 +493,35 @@
   .ext-sec-export-btn:hover { background:var(--green); color:#fff; border-color:var(--green); }
   .ext-envio-select { background:var(--surface2); border:1px solid var(--border); color:var(--text2); border-radius:6px; padding:2px 4px; font-size:10px; font-weight:600; cursor:pointer; font-family:var(--font-body); transition:all .15s; outline:none; max-width:80px; }
   .ext-envio-select:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ===== APROVAÇÕES ===== */
+  .aprov-board { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; align-items:start; }
+  .aprov-col { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .aprov-col-header { padding:12px 14px 10px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--surface2); }
+  .aprov-col-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text); }
+  .aprov-col-count { font-size:10px; background:var(--border); border-radius:10px; padding:1px 8px; color:var(--text2); font-weight:600; }
+  .aprov-col-confirm-all { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--text2); cursor:pointer; user-select:none; }
+  .aprov-col-confirm-all input { accent-color:#166534; width:13px; height:13px; cursor:pointer; }
+  .aprov-cards { padding:10px; display:flex; flex-direction:column; gap:8px; min-height:60px; }
+  .aprov-card { background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:10px 12px; display:flex; align-items:flex-start; gap:8px; transition:background .2s,border-color .2s; }
+  .aprov-card.done { background:rgba(22,101,52,.07); border-color:rgba(22,101,52,.35); }
+  .aprov-card-check { accent-color:#166534; width:15px; height:15px; flex-shrink:0; margin-top:2px; cursor:pointer; }
+  .aprov-card-body { flex:1; min-width:0; }
+  .aprov-card-nome { font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .aprov-card-ficha { font-size:10px; color:var(--text2); margin-top:1px; }
+  .aprov-card-valor { font-size:12px; font-weight:700; color:var(--vinho); margin-top:4px; }
+  .aprov-card-done-tag { font-size:9px; font-weight:700; background:#166534; color:#fff; border-radius:8px; padding:1px 7px; margin-left:6px; vertical-align:middle; }
+  .aprov-card-del { background:none; border:none; color:var(--border); font-size:14px; cursor:pointer; padding:0 2px; line-height:1; flex-shrink:0; margin-top:1px; transition:color .15s; }
+  .aprov-card-del:hover { color:var(--red); }
+  .aprov-add-btn { margin:0 10px 10px; width:calc(100% - 20px); padding:7px; background:none; border:1px dashed var(--border); border-radius:8px; font-size:11px; color:var(--text2); cursor:pointer; font-family:var(--font-body); transition:all .15s; }
+  .aprov-add-btn:hover { border-color:var(--vinho); color:var(--vinho); background:rgba(139,45,66,.04); }
+  .aprov-add-form { margin:0 10px 10px; background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:10px; display:flex; flex-direction:column; gap:7px; }
+  .aprov-add-form input { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:6px 9px; font-size:11px; font-family:var(--font-body); color:var(--text); outline:none; width:100%; }
+  .aprov-add-form input:focus { border-color:var(--vinho); }
+  .aprov-add-form-btns { display:flex; gap:6px; }
+  .aprov-save-btn { flex:1; padding:6px; background:var(--vinho); color:var(--marfim); border:none; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; font-family:var(--font-body); }
+  .aprov-cancel-btn { padding:6px 10px; background:none; border:1px solid var(--border); border-radius:6px; font-size:11px; color:var(--text2); cursor:pointer; font-family:var(--font-body); }
+  .aprov-lock-banner { background:rgba(139,45,66,.07); border:1px solid rgba(139,45,66,.2); border-radius:8px; padding:8px 14px; font-size:11px; color:var(--vinho); display:flex; align-items:center; gap:8px; margin-bottom:16px; }
 </style>
 </head>
 <body>
@@ -509,6 +538,7 @@
     <button class="tab" onclick="switchTab('negativacao')">Negativação <span class="tab-badge" id="badge-negativacao">0</span></button>
     <button class="tab" onclick="switchTab('desativacao')">Desativação <span class="tab-badge" id="badge-desativacao">0</span></button>
     <button class="tab" onclick="switchTab('conciliacao')">Conciliações</button>
+    <button class="tab" onclick="switchTab('aprovacoes')">Aprovações</button>
   </div>
 </div>
 
@@ -1226,6 +1256,35 @@
     </div>
   </div>
 
+
+  <!-- ===== APROVAÇÕES ===== -->
+  <div class="tab-content" id="tab-aprovacoes">
+    <div class="section-header">
+      <div class="section-title">Aprovações <span>Registros para modificação em sistema</span></div>
+    </div>
+
+    <!-- Banner de acesso restrito para aprovação -->
+    <div id="aprov-lock-banner" class="aprov-lock-banner" style="display:none">
+      🔒 Somente a <strong>Dra. Mone</strong> pode aprovar itens. Você pode adicionar e visualizar registros.
+    </div>
+
+    <!-- Seletor de usuário -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--text2);font-weight:600">Usuário ativo:</span>
+      <select id="aprov-usuario" onchange="aprovSetUsuario()" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:600;font-family:var(--font-body);color:var(--text);cursor:pointer;outline:none">
+        <option value="">— selecione —</option>
+        <option value="Dra. Mone">Dra. Mone</option>
+        <option value="Recepção">Recepção</option>
+        <option value="Financeiro">Financeiro</option>
+        <option value="Outro">Outro</option>
+      </select>
+      <span id="aprov-usuario-tag" style="display:none;font-size:11px;background:var(--vinho);color:var(--marfim);border-radius:10px;padding:2px 10px;font-weight:600"></span>
+    </div>
+
+    <!-- Board de colunas -->
+    <div class="aprov-board" id="aprov-board"></div>
+  </div>
+
 </div><!-- /main -->
 
 <!-- ===== MODAL NOVA DESATIVAÇÃO ===== -->
@@ -1712,8 +1771,9 @@ function switchTab(name){
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
-  const map=['cobranca','renegociacao','negativacao','desativacao'];
-  document.querySelectorAll('.tab')[map.indexOf(name)].classList.add('active');
+  const map=['cobranca','renegociacao','negativacao','desativacao','conciliacao','aprovacoes'];
+  const idx = map.indexOf(name);
+  if(idx>=0) document.querySelectorAll('.tab')[idx].classList.add('active');
   if(name==='negativacao') renderNeg();
 }
 
@@ -6056,6 +6116,157 @@ function extratoInit(){
   extratoRenderMes();
 }
 
+// ==================== APROVAÇÕES ====================
+
+const APROV_COLUNAS = [
+  { id:'dinheiro',       label:'💵 Dinheiro',               cor:'#c4955a' },
+  { id:'transferencia',  label:'🔄 Transferência',           cor:'#1e40af' },
+  { id:'ajuste_boleto',  label:'📋 Ajustes de Boletos',      cor:'#7c3aed' },
+  { id:'renegociacao',   label:'🤝 Renegociações',           cor:'#0891b2' },
+  { id:'recados',        label:'📝 Recados e Solicitações',  cor:'#d97706' },
+  { id:'cancelamentos',  label:'❌ Cancelamentos',            cor:'#dc2626' },
+  { id:'negativacoes',   label:'⚠️ Negativações',            cor:'#9a3412' },
+];
+
+let aprovData = JSON.parse(localStorage.getItem('aprovData') || '{}');
+let aprovUsuario = localStorage.getItem('aprovUsuario') || '';
+
+function aprovSalvar(){
+  try{ localStorage.setItem('aprovData', JSON.stringify(aprovData)); }catch(e){}
+}
+
+function aprovSetUsuario(){
+  const sel = document.getElementById('aprov-usuario');
+  aprovUsuario = sel.value;
+  localStorage.setItem('aprovUsuario', aprovUsuario);
+  const tag = document.getElementById('aprov-usuario-tag');
+  const banner = document.getElementById('aprov-lock-banner');
+  if(aprovUsuario){
+    tag.style.display = 'inline-block';
+    tag.textContent = aprovUsuario;
+    banner.style.display = aprovUsuario === 'Dra. Mone' ? 'none' : 'flex';
+  } else {
+    tag.style.display = 'none';
+    banner.style.display = 'none';
+  }
+  aprovRenderBoard();
+}
+
+function aprovRenderBoard(){
+  const board = document.getElementById('aprov-board');
+  if(!board) return;
+  board.innerHTML = APROV_COLUNAS.map(col => aprovRenderCol(col)).join('');
+  // Restaura valor do select de usuário
+  const sel = document.getElementById('aprov-usuario');
+  if(sel && aprovUsuario) sel.value = aprovUsuario;
+}
+
+function aprovRenderCol(col){
+  const itens = aprovData[col.id] || [];
+  const total = itens.length;
+  const todos_ok = total > 0 && itens.every(i => i.done);
+  const podeConcluir = aprovUsuario === 'Dra. Mone';
+
+  const cardsHtml = itens.map((item, idx) => `
+    <div class="aprov-card ${item.done ? 'done' : ''}" id="aprov-card-${col.id}-${idx}">
+      <input type="checkbox" class="aprov-card-check"
+        ${item.done ? 'checked' : ''}
+        ${!podeConcluir ? 'disabled title="Somente Dra. Mone pode aprovar"' : ''}
+        onchange="aprovToggle('${col.id}',${idx},this.checked)">
+      <div class="aprov-card-body">
+        <div class="aprov-card-nome">${item.nome}${item.done ? '<span class="aprov-card-done-tag">✓ aprovado</span>' : ''}</div>
+        ${item.ficha ? `<div class="aprov-card-ficha">Ficha: ${item.ficha}</div>` : ''}
+        ${item.valor ? `<div class="aprov-card-valor">${item.valor}</div>` : ''}
+      </div>
+      <button class="aprov-card-del" onclick="aprovDel('${col.id}',${idx})" title="Remover">×</button>
+    </div>`).join('');
+
+  return `
+  <div class="aprov-col">
+    <div class="aprov-col-header" style="border-top:3px solid ${col.cor}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="aprov-col-title">${col.label}</span>
+        <span class="aprov-col-count">${total}</span>
+      </div>
+      <label class="aprov-col-confirm-all" title="${!podeConcluir ? 'Somente Dra. Mone pode aprovar' : 'Confirmar todos'}">
+        <input type="checkbox" ${todos_ok ? 'checked' : ''} ${!podeConcluir || total===0 ? 'disabled' : ''}
+          onchange="aprovConfirmarTodos('${col.id}',this.checked)">
+        <span>todos</span>
+      </label>
+    </div>
+    <div class="aprov-cards">${cardsHtml || '<div style="font-size:11px;color:var(--text2);text-align:center;padding:8px 0">Nenhum registro</div>'}</div>
+    <button class="aprov-add-btn" onclick="aprovAbrirForm('${col.id}')">＋ Adicionar</button>
+    <div class="aprov-add-form" id="aprov-form-${col.id}" style="display:none">
+      <input type="text" id="aprov-nome-${col.id}" placeholder="Nome do paciente *" />
+      <input type="text" id="aprov-ficha-${col.id}" placeholder="Nº ficha (opcional)" />
+      <input type="text" id="aprov-valor-${col.id}" placeholder="Valor (opcional, ex: R$ 500,00)" />
+      <div class="aprov-add-form-btns">
+        <button class="aprov-save-btn" onclick="aprovSalvarItem('${col.id}')">Salvar</button>
+        <button class="aprov-cancel-btn" onclick="aprovFecharForm('${col.id}')">Cancelar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function aprovAbrirForm(colId){
+  document.getElementById(`aprov-form-${colId}`).style.display = 'flex';
+  document.getElementById(`aprov-nome-${colId}`).focus();
+}
+
+function aprovFecharForm(colId){
+  document.getElementById(`aprov-form-${colId}`).style.display = 'none';
+  ['nome','ficha','valor'].forEach(f => {
+    document.getElementById(`aprov-${f}-${colId}`).value = '';
+  });
+}
+
+function aprovSalvarItem(colId){
+  const nome = document.getElementById(`aprov-nome-${colId}`).value.trim();
+  if(!nome){ document.getElementById(`aprov-nome-${colId}`).focus(); return; }
+  const ficha = document.getElementById(`aprov-ficha-${colId}`).value.trim();
+  const valor = document.getElementById(`aprov-valor-${colId}`).value.trim();
+  if(!aprovData[colId]) aprovData[colId] = [];
+  aprovData[colId].push({ nome, ficha, valor, done: false, criadoEm: new Date().toISOString() });
+  aprovSalvar();
+  aprovRenderBoard();
+}
+
+function aprovToggle(colId, idx, checked){
+  if(aprovUsuario !== 'Dra. Mone'){ aprovRenderBoard(); return; }
+  if(!aprovData[colId]) return;
+  aprovData[colId][idx].done = checked;
+  aprovSalvar();
+  aprovRenderBoard();
+}
+
+function aprovConfirmarTodos(colId, checked){
+  if(aprovUsuario !== 'Dra. Mone'){ aprovRenderBoard(); return; }
+  if(!aprovData[colId]) return;
+  aprovData[colId].forEach(i => i.done = checked);
+  aprovSalvar();
+  aprovRenderBoard();
+}
+
+function aprovDel(colId, idx){
+  if(!aprovData[colId]) return;
+  aprovData[colId].splice(idx, 1);
+  aprovSalvar();
+  aprovRenderBoard();
+}
+
+function aprovInit(){
+  // Restaura usuário salvo
+  const sel = document.getElementById('aprov-usuario');
+  if(sel && aprovUsuario){
+    sel.value = aprovUsuario;
+    const tag = document.getElementById('aprov-usuario-tag');
+    const banner = document.getElementById('aprov-lock-banner');
+    if(tag){ tag.style.display='inline-block'; tag.textContent=aprovUsuario; }
+    if(banner){ banner.style.display = aprovUsuario==='Dra. Mone'?'none':'flex'; }
+  }
+  aprovRenderBoard();
+}
+
 // Restaura estados salvos ao inicializar
 concInicializarMeses();
 concRestaurarTodos();
@@ -6063,15 +6274,20 @@ concRestaurarTodos();
 // Pré-cria os 12 meses do extrato — script está no fim do body, DOM já existe
 extratoInit();
 
+// Inicializa aprovações
+aprovInit();
+
 // Inicializa painel ativo ao entrar na aba (encadeia no patch existente)
 (function(){
   const _prev = window.switchTab;
   window.switchTab = function(name){
     _prev(name);
     if(name==='conciliacao'){
-      // Re-renderiza todos os painéis conciliação com dados restaurados
       Object.keys(CONC_TIPOS).forEach(t => renderConcPanel(t));
       extratoInit();
+    }
+    if(name==='aprovacoes'){
+      aprovRenderBoard();
     }
   };
 })();
