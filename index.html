@@ -6261,13 +6261,26 @@ function aprovRenderNavMeses(){
   }).join('');
 }
 
+function aprovContarAbertos(grupoId){
+  const mesD = aprovMesData();
+  const colunas = APROV_GRUPOS[grupoId] || [];
+  return colunas.reduce((sum, col) => {
+    const itens = (mesD.colunas || {})[col.id] || [];
+    return sum + itens.filter(i => !i.done).length;
+  }, 0);
+}
+
 function aprovRenderSubAbas(){
   ['entradas','trocas'].forEach(id => {
     const btn = document.getElementById(`aprov-subtab-${id}`);
     if(btn){
-      btn.style.background = aprovSubAba===id ? 'var(--vinho)' : 'var(--surface2)';
-      btn.style.color = aprovSubAba===id ? 'var(--marfim)' : 'var(--text2)';
-      btn.style.borderColor = aprovSubAba===id ? 'var(--vinho)' : 'var(--border)';
+      const ativo = aprovSubAba === id;
+      btn.style.background = ativo ? 'var(--vinho)' : 'var(--surface2)';
+      btn.style.color = ativo ? 'var(--marfim)' : 'var(--text2)';
+      btn.style.borderColor = ativo ? 'var(--vinho)' : 'var(--border)';
+      const abertos = aprovContarAbertos(id);
+      const label = id === 'entradas' ? '💵 Entradas' : '🔄 Trocas';
+      btn.textContent = abertos > 0 ? `${label}  ${abertos}` : label;
     }
   });
 }
@@ -6287,14 +6300,19 @@ function aprovRenderBoard(){
 
 function aprovRenderCol(col){
   const mesD = aprovMesData();
-  const itens = (mesD.colunas || {})[col.id] || [];
+  const itensOrig = (mesD.colunas || {})[col.id] || [];
   const finalizado = mesD.finalizado;
   const podeConcluir = aprovUsuario === 'Dra. Mone';
-  const total = itens.length;
-  const totalValor = itens.reduce((s,i) => s + aprovParseValor(i.valor), 0);
-  const todos_ok = total > 0 && itens.every(i => i.done);
+  const total = itensOrig.length;
+  const totalValor = itensOrig.reduce((s,i) => s + aprovParseValor(i.valor), 0);
+  const todos_ok = total > 0 && itensOrig.every(i => i.done);
 
-  const cardsHtml = itens.map((item, idx) => {
+  // approved cards go to the end, preserving original index for callbacks
+  const itens = itensOrig
+    .map((item, idx) => ({item, idx}))
+    .sort((a, b) => (a.item.done ? 1 : 0) - (b.item.done ? 1 : 0));
+
+  const cardsHtml = itens.map(({item, idx}) => {
     const dataCriacao = item.criadoEm ? new Date(item.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '';
     const fichaData = [item.ficha?`Ficha: ${item.ficha}`:'', dataCriacao].filter(Boolean).join(' · ');
     return `
@@ -6375,11 +6393,12 @@ function aprovRenderRecados(){
       ${respostasHtml?`<div style="width:100%;padding-left:26px">${respostasHtml}</div>`:''}
       ${!finalizado&&aprovUsuario?`
       <div style="width:100%;padding-left:26px;margin-top:2px">
-        <div id="aprov-resp-form-${idx}" style="display:none;gap:5px;align-items:flex-end">
-          <input type="text" id="aprov-resp-txt-${idx}" placeholder="Responder..." onkeydown="if(event.key==='Enter')aprovRecadoResponder(${idx})"
-            style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;font-family:var(--font-body);color:var(--text);outline:none">
-          <button class="aprov-save-btn" style="padding:4px 10px" onclick="aprovRecadoResponder(${idx})">↩</button>
-          <button class="aprov-cancel-btn" style="padding:4px 8px" onclick="document.getElementById('aprov-resp-form-${idx}').style.display='none'">×</button>
+        <div id="aprov-resp-form-${idx}" style="display:none;gap:4px;align-items:center">
+          <input type="text" id="aprov-resp-txt-${idx}" placeholder="Responder..."
+            onkeydown="if(event.key==='Enter'){event.preventDefault();aprovRecadoResponder(${idx});}"
+            style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 7px;font-size:11px;font-family:var(--font-body);color:var(--text);outline:none">
+          <button onclick="aprovRecadoResponder(${idx})" title="Enviar" style="background:var(--vinho);color:var(--marfim);border:none;border-radius:5px;padding:3px 7px;font-size:12px;cursor:pointer;line-height:1">↩</button>
+          <button onclick="document.getElementById('aprov-resp-form-${idx}').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:5px;padding:3px 6px;font-size:11px;color:var(--text2);cursor:pointer;line-height:1">×</button>
         </div>
         <button style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:0;font-family:var(--font-body)" onclick="document.getElementById('aprov-resp-form-${idx}').style.display='flex';document.getElementById('aprov-resp-txt-${idx}').focus()">↩ Responder</button>
       </div>`:''}
