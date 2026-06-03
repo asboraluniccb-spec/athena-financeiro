@@ -1263,13 +1263,8 @@
       <div class="section-title">Aprovações <span>Registros para modificação em sistema</span></div>
     </div>
 
-    <!-- Banner de acesso restrito para aprovação -->
-    <div id="aprov-lock-banner" class="aprov-lock-banner" style="display:none">
-      🔒 Somente a <strong>Dra. Mone</strong> pode aprovar itens. Você pode adicionar e visualizar registros.
-    </div>
-
-    <!-- Seletor de usuário -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+    <!-- Linha: usuário + finalizar -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <span style="font-size:11px;color:var(--text2);font-weight:600">Usuário ativo:</span>
       <select id="aprov-usuario" onchange="aprovSetUsuario()" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:600;font-family:var(--font-body);color:var(--text);cursor:pointer;outline:none">
         <option value="">— selecione —</option>
@@ -1279,6 +1274,31 @@
         <option value="Outro">Outro</option>
       </select>
       <span id="aprov-usuario-tag" style="display:none;font-size:11px;background:var(--vinho);color:var(--marfim);border-radius:10px;padding:2px 10px;font-weight:600"></span>
+      <div style="flex:1"></div>
+      <button id="aprov-btn-finalizar" onclick="aprovFinalizar()" style="padding:6px 16px;background:var(--vinho);color:var(--marfim);border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font-body);display:none">🔒 Finalizar Período</button>
+    </div>
+
+    <!-- Banner de acesso restrito para aprovação -->
+    <div id="aprov-lock-banner" class="aprov-lock-banner" style="display:none">
+      🔒 Somente a <strong>Dra. Mone</strong> pode aprovar itens. Você pode adicionar e visualizar registros.
+    </div>
+
+    <!-- Navegação de meses -->
+    <div id="aprov-nav-meses" style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;min-height:36px"></div>
+
+    <!-- Recados e solicitações -->
+    <div id="aprov-recados-wrap" style="margin-bottom:18px"></div>
+
+    <!-- Sub-abas: Entradas / Trocas -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:2px solid var(--border);padding-bottom:0">
+      <button id="aprov-subtab-entradas" onclick="aprovTrocarSubAba('entradas')"
+        style="padding:7px 20px;border:none;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);background:var(--vinho);color:var(--marfim);margin-bottom:-2px">
+        💵 Entradas
+      </button>
+      <button id="aprov-subtab-trocas" onclick="aprovTrocarSubAba('trocas')"
+        style="padding:7px 20px;border:none;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-bottom:none;margin-bottom:-2px">
+        🔄 Trocas
+      </button>
     </div>
 
     <!-- Board de colunas -->
@@ -6118,83 +6138,192 @@ function extratoInit(){
 
 // ==================== APROVAÇÕES ====================
 
-const APROV_COLUNAS = [
-  { id:'dinheiro',       label:'💵 Dinheiro',               cor:'#c4955a' },
-  { id:'transferencia',  label:'🔄 Transferência',           cor:'#1e40af' },
-  { id:'ajuste_boleto',  label:'📋 Ajustes de Boletos',      cor:'#7c3aed' },
-  { id:'renegociacao',   label:'🤝 Renegociações',           cor:'#0891b2' },
-  { id:'recados',        label:'📝 Recados e Solicitações',  cor:'#d97706' },
-  { id:'cancelamentos',  label:'❌ Cancelamentos',            cor:'#dc2626' },
-  { id:'negativacoes',   label:'⚠️ Negativações',            cor:'#9a3412' },
-];
+const APROV_MESES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-let aprovData = JSON.parse(localStorage.getItem('aprovData') || '{}');
+const APROV_GRUPOS = {
+  entradas: [
+    { id:'dinheiro',      label:'💵 Dinheiro / Cheques',      cor:'#c4955a' },
+    { id:'transferencia', label:'🔄 Transferências',           cor:'#1e40af' },
+    { id:'cartao',        label:'💳 Cartão Crédito / Débito',  cor:'#7c3aed' },
+  ],
+  trocas: [
+    { id:'ajuste_boleto', label:'📋 Ajustes de Boletos',       cor:'#0891b2' },
+    { id:'renegociacao',  label:'🤝 Renegociações',            cor:'#166534' },
+    { id:'cancelamentos', label:'❌ Cancelamentos',             cor:'#dc2626' },
+    { id:'negativacoes',  label:'⚠️ Negativações',             cor:'#9a3412' },
+  ]
+};
+
+// aprovData2 = { 'YYYY-MM': { finalizado: bool, colunas: { colId: [{nome,ficha,valor,done,criadoEm}] }, recados: [{texto,done,criadoEm}] } }
+let aprovData2   = JSON.parse(localStorage.getItem('aprovData2') || '{}');
 let aprovUsuario = localStorage.getItem('aprovUsuario') || '';
+let aprovMesAtivo = '';
+let aprovSubAba   = 'entradas'; // 'entradas' | 'trocas'
 
 function aprovSalvar(){
-  try{ localStorage.setItem('aprovData', JSON.stringify(aprovData)); }catch(e){}
+  try{ localStorage.setItem('aprovData2', JSON.stringify(aprovData2)); }catch(e){}
 }
 
+// ── Mês ──────────────────────────────────────────────────────────────────────
+function aprovMesKey(ano, mes){ return `${ano}-${String(mes).padStart(2,'0')}`; }
+
+function aprovInicializarMeses(){
+  const now = new Date();
+  const ano = now.getFullYear();
+  let mudou = false;
+  for(let m=1; m<=12; m++){
+    const k = aprovMesKey(ano, m);
+    if(!aprovData2[k]){
+      aprovData2[k] = { label: `${APROV_MESES_NOMES[m-1]}/${ano}`, finalizado: false, colunas: {}, recados: [] };
+      mudou = true;
+    }
+  }
+  if(mudou) aprovSalvar();
+  if(!aprovMesAtivo || !aprovData2[aprovMesAtivo]){
+    aprovMesAtivo = aprovMesKey(ano, now.getMonth()+1);
+  }
+}
+
+function aprovMesData(){ return aprovData2[aprovMesAtivo] || { finalizado:false, colunas:{}, recados:[] }; }
+function aprovEstaFinalizado(){ return !!(aprovMesData().finalizado); }
+
+function aprovFinalizar(){
+  if(!confirm(`Finalizar o período ${aprovData2[aprovMesAtivo]?.label}? Nenhuma inclusão será possível após isso.`)) return;
+  if(!aprovData2[aprovMesAtivo]) return;
+  aprovData2[aprovMesAtivo].finalizado = true;
+  // Gera próximo mês se não existir
+  const [ano, mes] = aprovMesAtivo.split('-').map(Number);
+  let pAno = ano, pMes = mes + 1;
+  if(pMes > 12){ pMes = 1; pAno++; }
+  const prox = aprovMesKey(pAno, pMes);
+  if(!aprovData2[prox]){
+    aprovData2[prox] = { label:`${APROV_MESES_NOMES[pMes-1]}/${pAno}`, finalizado:false, colunas:{}, recados:[] };
+  }
+  aprovSalvar();
+  aprovMesAtivo = prox;
+  aprovRender();
+}
+
+function aprovMudarMes(key){
+  aprovMesAtivo = key;
+  aprovRender();
+}
+
+// ── Usuário ───────────────────────────────────────────────────────────────────
 function aprovSetUsuario(){
   const sel = document.getElementById('aprov-usuario');
   aprovUsuario = sel.value;
   localStorage.setItem('aprovUsuario', aprovUsuario);
+  aprovRender();
+}
+
+// ── Parse valor monetário ─────────────────────────────────────────────────────
+function aprovParseValor(s){
+  if(!s) return 0;
+  const n = parseFloat(String(s).replace(/[R$\s.]/g,'').replace(',','.'));
+  return isNaN(n) ? 0 : n;
+}
+function aprovFmtValor(v){ return v > 0 ? `R$ ${v.toFixed(2).replace('.',',')}` : ''; }
+
+// ── Render principal ──────────────────────────────────────────────────────────
+function aprovRender(){
+  aprovRenderNavMeses();
+  aprovRenderRecados();
+  aprovRenderSubAbas();
+  aprovRenderBoard();
+  // restaura select usuário
+  const sel = document.getElementById('aprov-usuario');
+  if(sel && aprovUsuario) sel.value = aprovUsuario;
   const tag = document.getElementById('aprov-usuario-tag');
   const banner = document.getElementById('aprov-lock-banner');
-  if(aprovUsuario){
-    tag.style.display = 'inline-block';
-    tag.textContent = aprovUsuario;
-    banner.style.display = aprovUsuario === 'Dra. Mone' ? 'none' : 'flex';
-  } else {
-    tag.style.display = 'none';
-    banner.style.display = 'none';
+  if(tag){ tag.style.display = aprovUsuario?'inline-block':'none'; tag.textContent = aprovUsuario; }
+  if(banner){ banner.style.display = (aprovUsuario && aprovUsuario!=='Dra. Mone') ? 'flex' : 'none'; }
+  // botão finalizar
+  const btnFin = document.getElementById('aprov-btn-finalizar');
+  if(btnFin){
+    const fin = aprovEstaFinalizado();
+    btnFin.style.display = 'inline-block';
+    btnFin.disabled = fin;
+    btnFin.textContent = fin ? '✅ Período Finalizado' : '🔒 Finalizar Período';
+    btnFin.style.opacity = fin ? '.5' : '1';
   }
+}
+
+function aprovRenderNavMeses(){
+  const nav = document.getElementById('aprov-nav-meses');
+  if(!nav) return;
+  const keys = Object.keys(aprovData2).sort();
+  nav.innerHTML = keys.map(k => {
+    const d = aprovData2[k];
+    const ativo = k === aprovMesAtivo;
+    const fin = d.finalizado;
+    return `<button onclick="aprovMudarMes('${k}')" style="padding:4px 12px;border-radius:16px;border:1px solid ${ativo?'var(--vinho)':fin?'#166534':'var(--border)'};background:${ativo?'var(--vinho)':fin?'rgba(22,101,52,.1)':'var(--surface2)'};color:${ativo?'var(--marfim)':fin?'#166534':'var(--text2)'};font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font-body);white-space:nowrap">${d.label}${fin?' ✓':''}</button>`;
+  }).join('');
+}
+
+function aprovRenderSubAbas(){
+  ['entradas','trocas'].forEach(id => {
+    const btn = document.getElementById(`aprov-subtab-${id}`);
+    if(btn){
+      btn.style.background = aprovSubAba===id ? 'var(--vinho)' : 'var(--surface2)';
+      btn.style.color = aprovSubAba===id ? 'var(--marfim)' : 'var(--text2)';
+      btn.style.borderColor = aprovSubAba===id ? 'var(--vinho)' : 'var(--border)';
+    }
+  });
+}
+
+function aprovTrocarSubAba(id){
+  aprovSubAba = id;
+  aprovRenderSubAbas();
   aprovRenderBoard();
 }
 
 function aprovRenderBoard(){
   const board = document.getElementById('aprov-board');
   if(!board) return;
-  board.innerHTML = APROV_COLUNAS.map(col => aprovRenderCol(col)).join('');
-  // Restaura valor do select de usuário
-  const sel = document.getElementById('aprov-usuario');
-  if(sel && aprovUsuario) sel.value = aprovUsuario;
+  const colunas = APROV_GRUPOS[aprovSubAba] || [];
+  board.innerHTML = colunas.map(col => aprovRenderCol(col)).join('');
 }
 
 function aprovRenderCol(col){
-  const itens = aprovData[col.id] || [];
-  const total = itens.length;
-  const todos_ok = total > 0 && itens.every(i => i.done);
+  const mesD = aprovMesData();
+  const itens = (mesD.colunas || {})[col.id] || [];
+  const finalizado = mesD.finalizado;
   const podeConcluir = aprovUsuario === 'Dra. Mone';
+  const total = itens.length;
+  const totalValor = itens.reduce((s,i) => s + aprovParseValor(i.valor), 0);
+  const todos_ok = total > 0 && itens.every(i => i.done);
 
   const cardsHtml = itens.map((item, idx) => `
-    <div class="aprov-card ${item.done ? 'done' : ''}" id="aprov-card-${col.id}-${idx}">
+    <div class="aprov-card ${item.done?'done':''}">
       <input type="checkbox" class="aprov-card-check"
-        ${item.done ? 'checked' : ''}
-        ${!podeConcluir ? 'disabled title="Somente Dra. Mone pode aprovar"' : ''}
+        ${item.done?'checked':''}
+        ${!podeConcluir?'disabled title="Somente Dra. Mone pode aprovar"':''}
         onchange="aprovToggle('${col.id}',${idx},this.checked)">
       <div class="aprov-card-body">
-        <div class="aprov-card-nome">${item.nome}${item.done ? '<span class="aprov-card-done-tag">✓ aprovado</span>' : ''}</div>
-        ${item.ficha ? `<div class="aprov-card-ficha">Ficha: ${item.ficha}</div>` : ''}
-        ${item.valor ? `<div class="aprov-card-valor">${item.valor}</div>` : ''}
+        <div class="aprov-card-nome">${item.nome}${item.done?'<span class="aprov-card-done-tag">✓</span>':''}</div>
+        ${item.ficha?`<div class="aprov-card-ficha">Ficha: ${item.ficha}</div>`:''}
+        ${item.valor?`<div class="aprov-card-valor">${item.valor}</div>`:''}
       </div>
-      <button class="aprov-card-del" onclick="aprovDel('${col.id}',${idx})" title="Remover">×</button>
+      ${!finalizado?`<button class="aprov-card-del" onclick="aprovDel('${col.id}',${idx})" title="Remover">×</button>`:''}
     </div>`).join('');
 
   return `
   <div class="aprov-col">
     <div class="aprov-col-header" style="border-top:3px solid ${col.cor}">
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
         <span class="aprov-col-title">${col.label}</span>
         <span class="aprov-col-count">${total}</span>
+        ${totalValor>0?`<span style="font-size:10px;font-weight:700;color:${col.cor};background:${col.cor}18;border-radius:8px;padding:1px 8px">${aprovFmtValor(totalValor)}</span>`:''}
       </div>
-      <label class="aprov-col-confirm-all" title="${!podeConcluir ? 'Somente Dra. Mone pode aprovar' : 'Confirmar todos'}">
-        <input type="checkbox" ${todos_ok ? 'checked' : ''} ${!podeConcluir || total===0 ? 'disabled' : ''}
+      <label class="aprov-col-confirm-all">
+        <input type="checkbox" ${todos_ok?'checked':''} ${!podeConcluir||total===0||finalizado?'disabled':''}
           onchange="aprovConfirmarTodos('${col.id}',this.checked)">
         <span>todos</span>
       </label>
     </div>
-    <div class="aprov-cards">${cardsHtml || '<div style="font-size:11px;color:var(--text2);text-align:center;padding:8px 0">Nenhum registro</div>'}</div>
+    <div class="aprov-cards">${cardsHtml||'<div style="font-size:11px;color:var(--text2);text-align:center;padding:10px 0">Nenhum registro</div>'}</div>
+    ${!finalizado?`
     <button class="aprov-add-btn" onclick="aprovAbrirForm('${col.id}')">＋ Adicionar</button>
     <div class="aprov-add-form" id="aprov-form-${col.id}" style="display:none">
       <input type="text" id="aprov-nome-${col.id}" placeholder="Nome do paciente *" />
@@ -6204,10 +6333,82 @@ function aprovRenderCol(col){
         <button class="aprov-save-btn" onclick="aprovSalvarItem('${col.id}')">Salvar</button>
         <button class="aprov-cancel-btn" onclick="aprovFecharForm('${col.id}')">Cancelar</button>
       </div>
-    </div>
+    </div>`:'<div style="font-size:10px;color:var(--text2);text-align:center;padding:6px 0 8px;opacity:.6">período finalizado</div>'}
   </div>`;
 }
 
+// ── Recados ───────────────────────────────────────────────────────────────────
+function aprovRenderRecados(){
+  const wrap = document.getElementById('aprov-recados-wrap');
+  if(!wrap) return;
+  const mesD = aprovMesData();
+  const recados = mesD.recados || [];
+  const finalizado = mesD.finalizado;
+  const podeConcluir = aprovUsuario === 'Dra. Mone';
+
+  const itensHtml = recados.map((r, idx) => `
+    <div class="aprov-card ${r.done?'done':''}" style="margin-bottom:6px">
+      <input type="checkbox" class="aprov-card-check"
+        ${r.done?'checked':''}
+        ${!podeConcluir?'disabled':''}
+        onchange="aprovRecadoToggle(${idx},this.checked)">
+      <div class="aprov-card-body">
+        <div class="aprov-card-nome">${r.texto}${r.done?'<span class="aprov-card-done-tag">✓</span>':''}</div>
+        <div class="aprov-card-ficha">${r.criadoEm ? new Date(r.criadoEm).toLocaleDateString('pt-BR') : ''}</div>
+      </div>
+      ${!finalizado?`<button class="aprov-card-del" onclick="aprovRecadoDel(${idx})" title="Remover">×</button>`:''}
+    </div>`).join('');
+
+  wrap.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px">
+      <div class="aprov-col-header" style="border-top:3px solid #d97706">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="aprov-col-title">📝 Recados e Solicitações</span>
+          <span class="aprov-col-count">${recados.length}</span>
+        </div>
+      </div>
+      <div style="padding:10px 12px">
+        ${itensHtml||'<div style="font-size:11px;color:var(--text2);padding:6px 0">Nenhum recado</div>'}
+        ${!finalizado?`
+        <div id="aprov-recado-form" style="display:none;gap:7px;flex-direction:column;margin-top:8px">
+          <textarea id="aprov-recado-texto" rows="2" placeholder="Escreva o recado ou solicitação..." style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:11px;font-family:var(--font-body);color:var(--text);resize:vertical;width:100%;outline:none"></textarea>
+          <div style="display:flex;gap:6px">
+            <button class="aprov-save-btn" onclick="aprovRecadoSalvar()">Salvar</button>
+            <button class="aprov-cancel-btn" onclick="document.getElementById('aprov-recado-form').style.display='none'">Cancelar</button>
+          </div>
+        </div>
+        <button class="aprov-add-btn" style="margin:6px 0 0" onclick="document.getElementById('aprov-recado-form').style.display='flex';document.getElementById('aprov-recado-texto').focus()">＋ Adicionar Recado</button>
+        `:''}
+      </div>
+    </div>`;
+}
+
+function aprovRecadoToggle(idx, checked){
+  if(aprovUsuario !== 'Dra. Mone'){ aprovRenderRecados(); return; }
+  if(!aprovData2[aprovMesAtivo]) return;
+  if(!aprovData2[aprovMesAtivo].recados) aprovData2[aprovMesAtivo].recados = [];
+  aprovData2[aprovMesAtivo].recados[idx].done = checked;
+  aprovSalvar(); aprovRenderRecados();
+}
+
+function aprovRecadoDel(idx){
+  if(!aprovData2[aprovMesAtivo]?.recados) return;
+  aprovData2[aprovMesAtivo].recados.splice(idx, 1);
+  aprovSalvar(); aprovRenderRecados();
+}
+
+function aprovRecadoSalvar(){
+  const txt = document.getElementById('aprov-recado-texto').value.trim();
+  if(!txt) return;
+  if(!aprovData2[aprovMesAtivo]) return;
+  if(!aprovData2[aprovMesAtivo].recados) aprovData2[aprovMesAtivo].recados = [];
+  aprovData2[aprovMesAtivo].recados.push({ texto: txt, done: false, criadoEm: new Date().toISOString() });
+  aprovSalvar(); aprovRenderRecados();
+  document.getElementById('aprov-recado-texto').value = '';
+  document.getElementById('aprov-recado-form').style.display = 'none';
+}
+
+// ── CRUD colunas ──────────────────────────────────────────────────────────────
 function aprovAbrirForm(colId){
   document.getElementById(`aprov-form-${colId}`).style.display = 'flex';
   document.getElementById(`aprov-nome-${colId}`).focus();
@@ -6215,9 +6416,7 @@ function aprovAbrirForm(colId){
 
 function aprovFecharForm(colId){
   document.getElementById(`aprov-form-${colId}`).style.display = 'none';
-  ['nome','ficha','valor'].forEach(f => {
-    document.getElementById(`aprov-${f}-${colId}`).value = '';
-  });
+  ['nome','ficha','valor'].forEach(f => { document.getElementById(`aprov-${f}-${colId}`).value = ''; });
 }
 
 function aprovSalvarItem(colId){
@@ -6225,46 +6424,42 @@ function aprovSalvarItem(colId){
   if(!nome){ document.getElementById(`aprov-nome-${colId}`).focus(); return; }
   const ficha = document.getElementById(`aprov-ficha-${colId}`).value.trim();
   const valor = document.getElementById(`aprov-valor-${colId}`).value.trim();
-  if(!aprovData[colId]) aprovData[colId] = [];
-  aprovData[colId].push({ nome, ficha, valor, done: false, criadoEm: new Date().toISOString() });
-  aprovSalvar();
-  aprovRenderBoard();
+  if(!aprovData2[aprovMesAtivo]) return;
+  if(!aprovData2[aprovMesAtivo].colunas) aprovData2[aprovMesAtivo].colunas = {};
+  if(!aprovData2[aprovMesAtivo].colunas[colId]) aprovData2[aprovMesAtivo].colunas[colId] = [];
+  aprovData2[aprovMesAtivo].colunas[colId].push({ nome, ficha, valor, done:false, criadoEm:new Date().toISOString() });
+  aprovSalvar(); aprovRenderBoard();
 }
 
 function aprovToggle(colId, idx, checked){
   if(aprovUsuario !== 'Dra. Mone'){ aprovRenderBoard(); return; }
-  if(!aprovData[colId]) return;
-  aprovData[colId][idx].done = checked;
-  aprovSalvar();
-  aprovRenderBoard();
+  const col = aprovData2[aprovMesAtivo]?.colunas?.[colId];
+  if(!col) return;
+  col[idx].done = checked;
+  aprovSalvar(); aprovRenderBoard();
 }
 
 function aprovConfirmarTodos(colId, checked){
   if(aprovUsuario !== 'Dra. Mone'){ aprovRenderBoard(); return; }
-  if(!aprovData[colId]) return;
-  aprovData[colId].forEach(i => i.done = checked);
-  aprovSalvar();
-  aprovRenderBoard();
+  const col = aprovData2[aprovMesAtivo]?.colunas?.[colId];
+  if(!col) return;
+  col.forEach(i => i.done = checked);
+  aprovSalvar(); aprovRenderBoard();
 }
 
 function aprovDel(colId, idx){
-  if(!aprovData[colId]) return;
-  aprovData[colId].splice(idx, 1);
-  aprovSalvar();
-  aprovRenderBoard();
+  const col = aprovData2[aprovMesAtivo]?.colunas?.[colId];
+  if(!col) return;
+  col.splice(idx, 1);
+  aprovSalvar(); aprovRenderBoard();
 }
 
+// ── Init ──────────────────────────────────────────────────────────────────────
 function aprovInit(){
-  // Restaura usuário salvo
+  aprovInicializarMeses();
   const sel = document.getElementById('aprov-usuario');
-  if(sel && aprovUsuario){
-    sel.value = aprovUsuario;
-    const tag = document.getElementById('aprov-usuario-tag');
-    const banner = document.getElementById('aprov-lock-banner');
-    if(tag){ tag.style.display='inline-block'; tag.textContent=aprovUsuario; }
-    if(banner){ banner.style.display = aprovUsuario==='Dra. Mone'?'none':'flex'; }
-  }
-  aprovRenderBoard();
+  if(sel && aprovUsuario) sel.value = aprovUsuario;
+  aprovRender();
 }
 
 // Restaura estados salvos ao inicializar
