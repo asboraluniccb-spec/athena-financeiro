@@ -1360,22 +1360,26 @@
       <!-- KPIs da sub-aba -->
       <div class="adp-header-kpis" id="adp-kpis"></div>
 
-      <!-- Filtro de mês + botão adicionar -->
+      <!-- Filtro de mês -->
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--text2);font-weight:600">Mês:</span>
         <div id="adp-nav-meses" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-        <div style="flex:1"></div>
-        <div id="adp-add-wrap" style="display:none">
-          <button onclick="adpAbrirForm()" style="padding:7px 18px;background:var(--vinho);color:var(--marfim);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">＋ Adicionar Movimentação</button>
-        </div>
       </div>
 
-      <!-- Formulário de adição -->
-      <div id="adp-form-wrap" style="display:none">
+      <!-- Formulário sempre visível para usuários permitidos -->
+      <div id="adp-form-wrap">
         <div class="adp-form-panel">
-          <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:14px">📋 Nova Movimentação</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <div style="font-size:13px;font-weight:800;color:var(--text)">📋 Nova Movimentação</div>
+            <div id="adp-add-wrap" style="display:none">
+              <!-- visibilidade controlada por JS conforme usuário -->
+            </div>
+            <div id="adp-perm-msg" style="display:none;font-size:11px;color:var(--text2);background:rgba(139,45,66,.07);border-radius:7px;padding:5px 12px">
+              🔒 Somente <strong>Dra. Mone</strong> ou <strong>Financeiro</strong> podem adicionar
+            </div>
+          </div>
 
-          <div class="adp-form-grid">
+          <div class="adp-form-grid" id="adp-fields-wrap">
             <div>
               <div class="adp-form-label">Data</div>
               <input type="date" id="adp-data" class="adp-form-input">
@@ -1387,7 +1391,10 @@
           </div>
 
           <!-- Upload — sempre visível -->
-          <div class="adp-form-label" style="margin-bottom:6px">Comprovante / Planilha <span style="font-weight:400;text-transform:none;font-size:10px">(opcional — Excel extrai despesas automaticamente)</span></div>
+          <div class="adp-form-label" style="margin-bottom:6px;margin-top:4px">
+            Comprovante / Planilha
+            <span style="font-weight:400;text-transform:none;font-size:10px;margin-left:4px">(Excel importa despesas automaticamente)</span>
+          </div>
           <div class="adp-upload-zone" id="adp-drop-zone"
             onclick="document.getElementById('adp-file-input').click()"
             ondragover="event.preventDefault();this.classList.add('drag')"
@@ -1396,7 +1403,7 @@
             <div class="adp-upload-zone-icon">📎</div>
             <div class="adp-upload-zone-text">
               <strong>Clique ou arraste</strong> um arquivo aqui<br>
-              <span style="font-size:10px">JPG · PNG · XLS · XLSX — Excel importa as despesas automaticamente</span>
+              <span style="font-size:10px">JPG · PNG · XLS · XLSX</span>
             </div>
           </div>
           <input type="file" id="adp-file-input" accept="image/*,.xls,.xlsx" style="display:none" onchange="adpHandleFile(this.files[0])">
@@ -1412,9 +1419,8 @@
             <div class="adp-despesas-list" id="adp-despesas-list"></div>
           </div>
 
-          <div style="display:flex;gap:8px;margin-top:14px">
-            <button onclick="adpSalvar()" style="flex:1;padding:9px;background:var(--vinho);color:var(--marfim);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">💾 Salvar</button>
-            <button onclick="adpFecharForm()" style="padding:9px 16px;background:none;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--font-body)">Cancelar</button>
+          <div id="adp-save-btns" style="display:flex;gap:8px;margin-top:14px">
+            <button onclick="adpSalvar()" style="flex:1;padding:9px;background:var(--vinho);color:var(--marfim);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">💾 Salvar Movimentação</button>
           </div>
         </div>
       </div>
@@ -6754,12 +6760,29 @@ function adpRender(){
   adpRenderNavMeses();
   adpRenderCards();
   adpRenderAddWrap();
+  // garante data preenchida no form
+  const dataEl = document.getElementById('adp-data');
+  if(dataEl && !dataEl.value) dataEl.value = new Date().toISOString().split('T')[0];
+  // garante ao menos uma linha de despesa
+  if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',valor:''}]; adpRenderLinhasDespesa(); }
 }
 
 function adpRenderAddWrap(){
-  const wrap = document.getElementById('adp-add-wrap');
-  if(!wrap) return;
-  wrap.style.display = ADP_USUARIOS_ADD.includes(aprovUsuario) ? '' : 'none';
+  const podeAdd = ADP_USUARIOS_ADD.includes(aprovUsuario);
+  const fields = document.getElementById('adp-fields-wrap');
+  const saveBtns = document.getElementById('adp-save-btns');
+  const permMsg = document.getElementById('adp-perm-msg');
+  const despList = document.getElementById('adp-despesas-list');
+  const addLinhaBtn = despList?.parentElement?.querySelector('button');
+  if(fields) fields.style.opacity = podeAdd ? '1' : '.45';
+  if(fields) fields.style.pointerEvents = podeAdd ? '' : 'none';
+  if(saveBtns) saveBtns.style.display = podeAdd ? 'flex' : 'none';
+  if(permMsg) permMsg.style.display = podeAdd ? 'none' : '';
+  const dropZone = document.getElementById('adp-drop-zone');
+  const fileInput = document.getElementById('adp-file-input');
+  if(dropZone){ dropZone.style.opacity = podeAdd ? '1' : '.45'; dropZone.style.pointerEvents = podeAdd ? '' : 'none'; }
+  if(fileInput) fileInput.disabled = !podeAdd;
+  if(addLinhaBtn){ addLinhaBtn.style.display = podeAdd ? '' : 'none'; }
 }
 
 function adpRenderKpis(){
@@ -6874,27 +6897,22 @@ function adpRenderCards(){
 
 // ── Formulário ──
 function adpAbrirForm(){
-  if(!ADP_USUARIOS_ADD.includes(aprovUsuario)){
-    alert('Você não tem permissão para adicionar movimentações.');
-    return;
-  }
   const hoje = new Date().toISOString().split('T')[0];
   document.getElementById('adp-data').value = hoje;
   document.getElementById('adp-saldo').value = '';
   document.getElementById('adp-file-info').textContent = '';
-  document.getElementById('adp-img-preview').style.display = 'none';
-  document.getElementById('adp-img-preview').src = '';
+  const prev = document.getElementById('adp-img-preview');
+  if(prev){ prev.style.display = 'none'; prev.src = ''; }
+  adpArquivoTemp = null;
   adpDespesasTemp = [];
   adpRenderLinhasDespesa();
   adpAdicionarLinhaDespesa();
-  document.getElementById('adp-form-wrap').style.display = '';
-  document.getElementById('adp-add-wrap').style.display = 'none';
   document.getElementById('adp-form-wrap').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function adpFecharForm(){
-  document.getElementById('adp-form-wrap').style.display = 'none';
-  document.getElementById('adp-add-wrap').style.display = ADP_USUARIOS_ADD.includes(aprovUsuario) ? '' : 'none';
+  // form always visible — just reset
+  adpAbrirForm();
 }
 
 let adpDespesasTemp = [];
@@ -7102,11 +7120,15 @@ function adpVerificarPendentesAoEntrar(){
   pendentes.forEach(([dia]) => adpAgendarRenotificacao(dia));
 }
 
-// Patch em aprovSetUsuario para verificar pendentes ao logar como Dra. Mone
+// Patch em aprovSetUsuario para verificar pendentes e atualizar form ao trocar usuário
 const _adpOrigSetUsuario = window.aprovSetUsuario;
 window.aprovSetUsuario = function(){
   if(_adpOrigSetUsuario) _adpOrigSetUsuario();
-  setTimeout(adpVerificarPendentesAoEntrar, 300);
+  setTimeout(() => {
+    adpVerificarPendentesAoEntrar();
+    adpRenderAddWrap();
+    if(aprovSubAba === 'despesas') adpRenderCards();
+  }, 300);
 };
 
 // alias para o botão salvar do form
