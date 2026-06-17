@@ -1306,7 +1306,7 @@
       <div class="section-title">Aprovações <span>Registros para modificação em sistema</span></div>
     </div>
 
-    <!-- Linha: usuário + finalizar -->
+    <!-- Linha: usuário + finalizar (compartilhada entre Entradas/Trocas de Moeda) -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <span style="font-size:11px;color:var(--text2);font-weight:600">Usuário ativo:</span>
       <select id="aprov-usuario" onchange="aprovSetUsuario()" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:600;font-family:var(--font-body);color:var(--text);cursor:pointer;outline:none">
@@ -1321,18 +1321,7 @@
       <button id="aprov-btn-finalizar" onclick="aprovFinalizar()" style="padding:6px 16px;background:var(--vinho);color:var(--marfim);border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font-body);display:none">🔒 Finalizar Período</button>
     </div>
 
-    <!-- Banner de acesso restrito para aprovação -->
-    <div id="aprov-lock-banner" class="aprov-lock-banner" style="display:none">
-      🔒 Somente a <strong>Dra. Mone</strong> pode aprovar itens. Você pode adicionar e visualizar registros.
-    </div>
-
-    <!-- Navegação de meses -->
-    <div id="aprov-nav-meses" style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;min-height:36px"></div>
-
-    <!-- Recados e solicitações -->
-    <div id="aprov-recados-wrap" style="margin-bottom:18px"></div>
-
-    <!-- Sub-abas: Entradas / Trocas / Aprovação de Despesas -->
+    <!-- Sub-abas principais -->
     <div style="display:flex;gap:6px;margin-bottom:0;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap">
       <button id="aprov-subtab-entradas" onclick="aprovTrocarSubAba('entradas')"
         style="padding:7px 20px;border:none;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);background:var(--vinho);color:var(--marfim);margin-bottom:-2px">
@@ -1340,7 +1329,7 @@
       </button>
       <button id="aprov-subtab-trocas" onclick="aprovTrocarSubAba('trocas')"
         style="padding:7px 20px;border:none;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-bottom:none;margin-bottom:-2px">
-        🔄 Trocas
+        🔄 Trocas de Moeda
       </button>
       <button id="aprov-subtab-despesas" onclick="aprovTrocarSubAba('despesas')"
         style="padding:7px 20px;border:none;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-bottom:none;margin-bottom:-2px">
@@ -1348,24 +1337,37 @@
       </button>
     </div>
 
-    <!-- Board de colunas (Entradas/Trocas) -->
-    <div class="aprov-board" id="aprov-board" style="padding-top:14px"></div>
+    <!-- Painel: Entradas / Trocas de Moeda -->
+    <div id="aprov-trocas-panel" style="padding-top:14px">
+      <!-- Banner de acesso restrito para aprovação -->
+      <div id="aprov-lock-banner" class="aprov-lock-banner" style="display:none">
+        🔒 Somente a <strong>Dra. Mone</strong> pode aprovar itens. Você pode adicionar e visualizar registros.
+      </div>
 
-    <!-- Sub-aba: Aprovação de Despesas -->
+      <!-- Navegação de meses -->
+      <div id="aprov-nav-meses" style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;min-height:36px"></div>
+
+      <!-- Recados e solicitações -->
+      <div id="aprov-recados-wrap" style="margin-bottom:18px"></div>
+
+      <!-- Board de colunas -->
+      <div class="aprov-board" id="aprov-board"></div>
+    </div>
+
+    <!-- Painel: Aprovação de Despesas -->
     <div id="aprov-subtab-despesas-panel" style="display:none;padding-top:14px">
 
-      <!-- KPIs totais -->
+      <!-- KPIs da sub-aba -->
       <div class="adp-header-kpis" id="adp-kpis"></div>
 
-      <!-- Filtro de mês -->
+      <!-- Filtro de mês + botão adicionar -->
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--text2);font-weight:600">Mês:</span>
         <div id="adp-nav-meses" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-      </div>
-
-      <!-- Botão adicionar (somente usuários permitidos) -->
-      <div id="adp-add-wrap" style="margin-bottom:16px;display:none">
-        <button onclick="adpAbrirForm()" style="padding:8px 20px;background:var(--vinho);color:var(--marfim);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">＋ Adicionar Movimentação do Dia</button>
+        <div style="flex:1"></div>
+        <div id="adp-add-wrap" style="display:none">
+          <button onclick="adpAbrirForm()" style="padding:7px 18px;background:var(--vinho);color:var(--marfim);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">＋ Adicionar Movimentação</button>
+        </div>
       </div>
 
       <!-- Formulário de adição -->
@@ -1384,20 +1386,24 @@
             </div>
           </div>
 
-          <!-- Upload -->
-          <div class="adp-form-label" style="margin-bottom:6px">Arquivo (imagem ou Excel)</div>
-          <div class="adp-upload-zone" id="adp-drop-zone" onclick="document.getElementById('adp-file-input').click()"
+          <!-- Upload — sempre visível -->
+          <div class="adp-form-label" style="margin-bottom:6px">Comprovante / Planilha <span style="font-weight:400;text-transform:none;font-size:10px">(opcional — Excel extrai despesas automaticamente)</span></div>
+          <div class="adp-upload-zone" id="adp-drop-zone"
+            onclick="document.getElementById('adp-file-input').click()"
             ondragover="event.preventDefault();this.classList.add('drag')"
             ondragleave="this.classList.remove('drag')"
             ondrop="adpHandleDrop(event)">
             <div class="adp-upload-zone-icon">📎</div>
-            <div class="adp-upload-zone-text"><strong>Clique ou arraste</strong> um arquivo aqui<br><span style="font-size:10px">JPG, PNG, XLS, XLSX aceitos</span></div>
+            <div class="adp-upload-zone-text">
+              <strong>Clique ou arraste</strong> um arquivo aqui<br>
+              <span style="font-size:10px">JPG · PNG · XLS · XLSX — Excel importa as despesas automaticamente</span>
+            </div>
           </div>
           <input type="file" id="adp-file-input" accept="image/*,.xls,.xlsx" style="display:none" onchange="adpHandleFile(this.files[0])">
           <img id="adp-img-preview" class="adp-img-preview">
           <div id="adp-file-info" style="font-size:11px;color:var(--text2);margin-top:4px"></div>
 
-          <!-- Lista de despesas extraídas/manuais -->
+          <!-- Lista de despesas -->
           <div style="margin-top:14px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
               <div class="adp-form-label" style="margin-bottom:0">Despesas</div>
@@ -6367,7 +6373,7 @@ function aprovRender(){
   const btnFin = document.getElementById('aprov-btn-finalizar');
   if(btnFin){
     const fin = aprovEstaFinalizado();
-    btnFin.style.display = 'inline-block';
+    btnFin.style.display = aprovSubAba !== 'despesas' ? 'inline-block' : 'none';
     btnFin.disabled = fin;
     btnFin.textContent = fin ? '✅ Período Finalizado' : '🔒 Finalizar Período';
     btnFin.style.opacity = fin ? '.5' : '1';
@@ -6411,10 +6417,12 @@ function aprovRenderSubAbas(){
     }
   });
   // mostrar/ocultar painéis
-  const board = document.getElementById('aprov-board');
-  const desp = document.getElementById('aprov-subtab-despesas-panel');
-  if(board) board.style.display = aprovSubAba !== 'despesas' ? '' : 'none';
-  if(desp) desp.style.display = aprovSubAba === 'despesas' ? '' : 'none';
+  const trocasPanel = document.getElementById('aprov-trocas-panel');
+  const despPanel = document.getElementById('aprov-subtab-despesas-panel');
+  const btnFin = document.getElementById('aprov-btn-finalizar');
+  if(trocasPanel) trocasPanel.style.display = aprovSubAba !== 'despesas' ? '' : 'none';
+  if(despPanel) despPanel.style.display = aprovSubAba === 'despesas' ? '' : 'none';
+  if(btnFin) btnFin.style.display = aprovSubAba !== 'despesas' ? 'inline-block' : 'none';
 }
 
 function aprovTrocarSubAba(id){
@@ -6769,11 +6777,14 @@ function adpRenderKpis(){
     if(v > maiorVal){ maiorVal = v; maiorDia = k; }
   });
 
+  const mediaPorDespesa = totalDespesas > 0 ? totalValor / totalDespesas : 0;
+
   el.innerHTML = `
     <div class="adp-kpi"><div class="adp-kpi-label">Nº de Despesas</div><div class="adp-kpi-value">${totalDespesas}</div><div class="adp-kpi-sub">em ${todos.length} dia${todos.length!==1?'s':''}</div></div>
     <div class="adp-kpi"><div class="adp-kpi-label">Valor Total</div><div class="adp-kpi-value" style="font-size:16px">${adpFmtValor(totalValor)}</div></div>
     <div class="adp-kpi"><div class="adp-kpi-label">Dia com Maior Movimentação</div><div class="adp-kpi-value" style="font-size:15px">${maiorDia?adpFmtData(maiorDia):'—'}</div><div class="adp-kpi-sub">${maiorDia?adpFmtValor(maiorVal):''}</div></div>
-    <div class="adp-kpi"><div class="adp-kpi-label">Média por Dia</div><div class="adp-kpi-value" style="font-size:16px">${adpFmtValor(mediaDia)}</div></div>`;
+    <div class="adp-kpi"><div class="adp-kpi-label">Média por Dia</div><div class="adp-kpi-value" style="font-size:16px">${adpFmtValor(mediaDia)}</div></div>
+    <div class="adp-kpi"><div class="adp-kpi-label">Média por Despesa</div><div class="adp-kpi-value" style="font-size:16px">${adpFmtValor(mediaPorDespesa)}</div><div class="adp-kpi-sub">valor médio individual</div></div>`;
 }
 
 function adpRenderNavMeses(){
