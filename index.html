@@ -1371,11 +1371,11 @@
         <div class="adp-form-panel">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
             <div style="font-size:13px;font-weight:800;color:var(--text)">📋 Nova Movimentação</div>
-            <div id="adp-add-wrap" style="display:none">
-              <!-- visibilidade controlada por JS conforme usuário -->
-            </div>
-            <div id="adp-perm-msg" style="display:none;font-size:11px;color:var(--text2);background:rgba(139,45,66,.07);border-radius:7px;padding:5px 12px">
-              🔒 Somente <strong>Dra. Mone</strong> ou <strong>Financeiro</strong> podem adicionar
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <div id="adp-perm-msg" style="display:none;font-size:11px;color:var(--text2);background:rgba(139,45,66,.07);border-radius:7px;padding:5px 12px">
+                🔒 Somente <strong>Dra. Mone</strong> ou <strong>Financeiro</strong> podem adicionar
+              </div>
+              <button onclick="adpAbrirConfig()" title="Configurar chave Gemini para extração automática de imagens" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font-body)" id="adp-config-btn">⚙ IA</button>
             </div>
           </div>
 
@@ -6765,6 +6765,15 @@ function adpRender(){
   if(dataEl && !dataEl.value) dataEl.value = new Date().toISOString().split('T')[0];
   // garante ao menos uma linha de despesa
   if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',valor:''}]; adpRenderLinhasDespesa(); }
+  // atualiza indicador de chave Gemini
+  const cfgBtn = document.getElementById('adp-config-btn');
+  if(cfgBtn){
+    const temKey = !!localStorage.getItem('adp_gemini_key');
+    cfgBtn.textContent = temKey ? '⚙ IA ✓' : '⚙ IA';
+    cfgBtn.style.color = temKey ? '#166534' : 'var(--text2)';
+    cfgBtn.style.borderColor = temKey ? '#166534' : 'var(--border)';
+    cfgBtn.title = temKey ? 'Chave Gemini configurada — extração automática de imagens ativa' : 'Configurar chave Gemini para extração automática de imagens';
+  }
 }
 
 function adpRenderAddWrap(){
@@ -6954,6 +6963,34 @@ function adpHandleDrop(e){
   if(f) adpHandleFile(f);
 }
 
+function adpSetStatus(msg, loading){
+  const el = document.getElementById('adp-file-info');
+  if(!el) return;
+  el.innerHTML = loading
+    ? `<span style="color:var(--vinho);font-weight:600">⏳ ${msg}</span>`
+    : `<span style="color:#166534;font-weight:600">✅ ${msg}</span>`;
+}
+
+function adpAplicarExtracao(dados){
+  // dados: { saldo, despesas:[{desc,valor}] }
+  if(dados.saldo){
+    const s = document.getElementById('adp-saldo');
+    if(s && !s.value) s.value = dados.saldo;
+  }
+  if(dados.despesas && dados.despesas.length > 0){
+    adpDespesasTemp = dados.despesas.map(d => ({
+      desc: d.desc || '',
+      valor: d.valor || ''
+    }));
+    adpRenderLinhasDespesa();
+  }
+  const total = dados.despesas ? dados.despesas.length : 0;
+  const soma = dados.despesas
+    ? dados.despesas.reduce((s,d) => s + adpParseValor(d.valor), 0)
+    : 0;
+  adpSetStatus(`${total} despesa${total!==1?'s':''} extraída${total!==1?'s':''}  |  Total: ${adpFmtValor(soma)}`, false);
+}
+
 function adpHandleFile(file){
   if(!file) return;
   adpArquivoTemp = { nome: file.name, tipo: file.type };
@@ -6966,11 +7003,14 @@ function adpHandleFile(file){
       const img = document.getElementById('adp-img-preview');
       img.src = e.target.result;
       img.style.display = '';
+      // extrai via IA
+      adpExtrairDeImagem(e.target.result, file.type);
     };
     reader.readAsDataURL(file);
   } else if(file.name.match(/\.xlsx?$/i)){
-    // Tenta extrair dados via SheetJS se disponível
-    if(window.XLSX){
+    adpSetStatus('Lendo planilha...', true);
+    const tentarLer = () => {
+      if(!window.XLSX){ setTimeout(tentarLer, 400); return; }
       const reader = new FileReader();
       reader.onload = e => {
         try {
@@ -6978,32 +7018,108 @@ function adpHandleFile(file){
           const ws = wb.Sheets[wb.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
           adpExtrairDespesasExcel(rows);
-        } catch(err){ console.warn('XLSX parse error', err); }
+        } catch(err){
+          adpSetStatus('Erro ao ler planilha. Verifique o arquivo.', false);
+        }
       };
       reader.readAsArrayBuffer(file);
-    }
+    };
+    tentarLer();
   }
 }
 
+async function adpExtrairDeImagem(base64DataUrl, mimeType){
+  const apiKey = localStorage.getItem('adp_gemini_key') || '';
+  if(!apiKey){
+    adpSetStatus('Imagem salva. Para extração automática, configure a chave Gemini nas ⚙ Configurações da aba.', false);
+    if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',valor:''}]; adpRenderLinhasDespesa(); }
+    return;
+  }
+  adpSetStatus('Analisando imagem com IA...', true);
+  try {
+    const base64 = base64DataUrl.split(',')[1];
+    const prompt = `Analise esta imagem de comprovante/extrato/planilha financeira e extraia APENAS as seguintes informações em formato JSON válido:
+{"saldo":"valor do saldo bancário do dia se visível como número com vírgula ex 12450,00 ou null se não encontrar","despesas":[{"desc":"descrição breve da despesa","valor":"valor em reais somente números e vírgula ex 150,00"}]}
+Regras: liste TODAS as despesas/pagamentos/saídas visíveis. Valores somente com vírgula decimal sem R$ sem pontos de milhar. Responda SOMENTE o JSON sem texto adicional.`;
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({contents:[{parts:[
+        {text: prompt},
+        {inline_data:{mime_type: mimeType||'image/jpeg', data: base64}}
+      ]}]})
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const text = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const match = text.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error('no json');
+    adpAplicarExtracao(JSON.parse(match[0]));
+  } catch(e){
+    adpSetStatus('Erro na análise da imagem. Preencha manualmente ou verifique a chave Gemini.', false);
+    if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',valor:''}]; adpRenderLinhasDespesa(); }
+  }
+}
+
+function adpAbrirConfig(){
+  const atual = localStorage.getItem('adp_gemini_key') || '';
+  const nova = prompt('Cole sua chave da API Google Gemini (fica salva localmente no navegador):\n\nObtente em: aistudio.google.com → Get API Key', atual);
+  if(nova === null) return;
+  localStorage.setItem('adp_gemini_key', nova.trim());
+  alert(nova.trim() ? '✅ Chave salva! Agora imagens serão analisadas automaticamente.' : 'Chave removida.');
+}
+
 function adpExtrairDespesasExcel(rows){
-  // Heurística: encontra colunas de descrição e valor
-  if(!rows || rows.length < 2) return;
-  const header = rows[0].map(c => String(c).toLowerCase());
-  const descIdx = header.findIndex(h => /desc|nome|hist|desp|item|lanc/.test(h));
-  const valIdx  = header.findIndex(h => /valor|vl|total|r\$|amount/.test(h));
-  if(descIdx < 0 && valIdx < 0) return;
+  if(!rows || rows.length < 1){ adpSetStatus('Planilha vazia.', false); return; }
+
+  // Normaliza cabeçalhos — trata planilha com ou sem header
+  const header = rows[0].map(c => String(c||'').toLowerCase().trim());
+
+  // Índices por heurística
+  const descIdx  = header.findIndex(h => /desc|historico|hist|nome|item|lanc|pagamento|fornecedor|beneficiario|destino/.test(h));
+  const valIdx   = header.findIndex(h => /valor|vl\b|vl_|debito|deb|saida|pagto|pago|amount|total/.test(h));
+  const saldoIdx = header.findIndex(h => /saldo/.test(h));
+
+  // Se não encontrou colunas, tenta identificar por conteúdo (planilha sem header)
+  let dataStart = 1;
+  if(descIdx < 0 && valIdx < 0){
+    // Tenta interpretar cada linha como (descrição, valor) — 2 colunas
+    dataStart = 0;
+  }
 
   const novas = [];
-  for(let i=1;i<rows.length;i++){
+  let saldoEncontrado = null;
+
+  for(let i = dataStart; i < rows.length; i++){
     const row = rows[i];
-    const desc = descIdx >= 0 ? String(row[descIdx]||'').trim() : '';
-    const valor = valIdx >= 0 ? String(row[valIdx]||'').trim() : '';
-    if(desc || valor) novas.push({desc, valor});
+    if(!row || row.every(c => !c)) continue; // linha vazia
+
+    let desc  = descIdx >= 0  ? String(row[descIdx]  || '').trim() : String(row[0] || '').trim();
+    let valor = valIdx  >= 0  ? String(row[valIdx]   || '').trim() : String(row[1] || '').trim();
+    const saldoCell = saldoIdx >= 0 ? String(row[saldoIdx] || '').trim() : '';
+
+    // Limpa valor: remove R$, espaços, converte ponto-milhar
+    valor = valor.replace(/R\$\s*/gi,'').replace(/\s/g,'');
+    // Normaliza: se vier 1.234,56 → 1234,56; se vier 1234.56 → 1234,56
+    if(/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(valor)) valor = valor.replace(/\./g,''); // remove pontos de milhar
+    else if(/^\d+\.\d{1,2}$/.test(valor)) valor = valor.replace('.',',');
+
+    if(saldoCell && !saldoEncontrado){
+      let sv = saldoCell.replace(/R\$\s*/gi,'').replace(/\s/g,'');
+      if(/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(sv)) sv = sv.replace(/\./g,'');
+      else if(/^\d+\.\d{1,2}$/.test(sv)) sv = sv.replace('.',',');
+      saldoEncontrado = sv;
+    }
+
+    if(desc && desc.length > 1 && !desc.match(/^(descrição|historico|descricao|item|nome|despesa)$/i)){
+      novas.push({ desc, valor });
+    }
   }
-  if(novas.length > 0){
-    adpDespesasTemp = [...adpDespesasTemp.filter(d => d.desc||d.valor), ...novas];
-    adpRenderLinhasDespesa();
-  }
+
+  if(novas.length === 0){ adpSetStatus('Nenhuma despesa encontrada na planilha.', false); return; }
+
+  adpAplicarExtracao({ saldo: saldoEncontrado, despesas: novas });
 }
 
 // ── Salvar movimentação ──
