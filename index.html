@@ -522,6 +522,49 @@
   .aprov-save-btn { flex:1; padding:6px; background:var(--vinho); color:var(--marfim); border:none; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; font-family:var(--font-body); }
   .aprov-cancel-btn { padding:6px 10px; background:none; border:1px solid var(--border); border-radius:6px; font-size:11px; color:var(--text2); cursor:pointer; font-family:var(--font-body); }
   .aprov-lock-banner { background:rgba(139,45,66,.07); border:1px solid rgba(139,45,66,.2); border-radius:8px; padding:8px 14px; font-size:11px; color:var(--vinho); display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+
+  /* ===== APROVAÇÃO DE DESPESAS ===== */
+  .adp-header-kpis { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-bottom:20px; }
+  .adp-kpi { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }
+  .adp-kpi-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text2); margin-bottom:4px; }
+  .adp-kpi-value { font-size:20px; font-weight:800; color:var(--vinho); line-height:1; }
+  .adp-kpi-sub { font-size:10px; color:var(--text2); margin-top:3px; }
+  .adp-day-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:14px; overflow:hidden; }
+  .adp-day-header { padding:12px 16px; background:var(--surface2); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  .adp-day-date { font-size:13px; font-weight:800; color:var(--text); }
+  .adp-day-meta { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .adp-day-badge { font-size:10px; font-weight:700; padding:2px 10px; border-radius:10px; }
+  .adp-day-body { padding:14px 16px; }
+  .adp-despesa-row { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+  .adp-despesa-row:last-child { border-bottom:none; }
+  .adp-despesa-desc { flex:1; font-size:12px; color:var(--text); }
+  .adp-despesa-val { font-size:12px; font-weight:700; color:var(--vinho); white-space:nowrap; }
+  .adp-status-bar { display:flex; align-items:center; gap:10px; padding:10px 16px; border-top:1px solid var(--border); background:var(--surface2); flex-wrap:wrap; }
+  .adp-approved-tag { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#166534; background:rgba(22,101,52,.1); border-radius:8px; padding:4px 10px; }
+  .adp-pending-tag { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#92400e; background:rgba(146,64,14,.1); border-radius:8px; padding:4px 10px; }
+  .adp-upload-zone { border:2px dashed var(--border); border-radius:12px; padding:32px 20px; text-align:center; cursor:pointer; transition:all .2s; margin-bottom:16px; }
+  .adp-upload-zone:hover,.adp-upload-zone.drag { border-color:var(--vinho); background:rgba(139,45,66,.04); }
+  .adp-upload-zone-icon { font-size:32px; margin-bottom:8px; }
+  .adp-upload-zone-text { font-size:12px; color:var(--text2); }
+  .adp-upload-zone-text strong { color:var(--vinho); }
+  .adp-notif-banner { position:fixed; top:18px; right:18px; z-index:9999; background:var(--vinho); color:var(--marfim); border-radius:14px; padding:14px 20px; max-width:340px; box-shadow:0 8px 32px rgba(0,0,0,.35); display:flex; align-items:flex-start; gap:12px; animation:adp-slide-in .35s cubic-bezier(.22,.61,.36,1); }
+  @keyframes adp-slide-in { from{transform:translateX(120%);opacity:0} to{transform:none;opacity:1} }
+  .adp-notif-icon { font-size:22px; flex-shrink:0; }
+  .adp-notif-body { flex:1; }
+  .adp-notif-title { font-size:13px; font-weight:800; margin-bottom:3px; }
+  .adp-notif-msg { font-size:11px; opacity:.85; }
+  .adp-notif-close { background:none; border:none; color:var(--marfim); font-size:18px; cursor:pointer; padding:0; opacity:.7; flex-shrink:0; }
+  .adp-form-panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:18px; }
+  .adp-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  .adp-form-grid .full { grid-column:1/-1; }
+  .adp-form-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--text2); margin-bottom:4px; }
+  .adp-form-input { background:var(--surface2); border:1px solid var(--border); border-radius:7px; padding:7px 10px; font-size:12px; font-family:var(--font-body); color:var(--text); outline:none; width:100%; }
+  .adp-form-input:focus { border-color:var(--vinho); }
+  .adp-img-preview { max-width:100%; border-radius:8px; border:1px solid var(--border); margin-top:8px; max-height:200px; object-fit:contain; display:none; }
+  .adp-despesas-list { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+  .adp-despesa-item { display:flex; gap:8px; align-items:center; }
+  .adp-despesa-item input { flex:1; }
+  .adp-despesa-item button { padding:4px 8px; font-size:12px; background:none; border:1px solid var(--border); border-radius:6px; cursor:pointer; color:var(--text2); }
 </style>
 </head>
 <body>
@@ -1289,8 +1332,8 @@
     <!-- Recados e solicitações -->
     <div id="aprov-recados-wrap" style="margin-bottom:18px"></div>
 
-    <!-- Sub-abas: Entradas / Trocas -->
-    <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:2px solid var(--border);padding-bottom:0">
+    <!-- Sub-abas: Entradas / Trocas / Aprovação de Despesas -->
+    <div style="display:flex;gap:6px;margin-bottom:0;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap">
       <button id="aprov-subtab-entradas" onclick="aprovTrocarSubAba('entradas')"
         style="padding:7px 20px;border:none;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);background:var(--vinho);color:var(--marfim);margin-bottom:-2px">
         💵 Entradas
@@ -1299,10 +1342,92 @@
         style="padding:7px 20px;border:none;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-bottom:none;margin-bottom:-2px">
         🔄 Trocas
       </button>
+      <button id="aprov-subtab-despesas" onclick="aprovTrocarSubAba('despesas')"
+        style="padding:7px 20px;border:none;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-bottom:none;margin-bottom:-2px">
+        🧾 Aprovação de Despesas
+      </button>
     </div>
 
-    <!-- Board de colunas -->
-    <div class="aprov-board" id="aprov-board"></div>
+    <!-- Board de colunas (Entradas/Trocas) -->
+    <div class="aprov-board" id="aprov-board" style="padding-top:14px"></div>
+
+    <!-- Sub-aba: Aprovação de Despesas -->
+    <div id="aprov-subtab-despesas-panel" style="display:none;padding-top:14px">
+
+      <!-- KPIs totais -->
+      <div class="adp-header-kpis" id="adp-kpis"></div>
+
+      <!-- Filtro de mês -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text2);font-weight:600">Mês:</span>
+        <div id="adp-nav-meses" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
+
+      <!-- Botão adicionar (somente usuários permitidos) -->
+      <div id="adp-add-wrap" style="margin-bottom:16px;display:none">
+        <button onclick="adpAbrirForm()" style="padding:8px 20px;background:var(--vinho);color:var(--marfim);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">＋ Adicionar Movimentação do Dia</button>
+      </div>
+
+      <!-- Formulário de adição -->
+      <div id="adp-form-wrap" style="display:none">
+        <div class="adp-form-panel">
+          <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:14px">📋 Nova Movimentação</div>
+
+          <div class="adp-form-grid">
+            <div>
+              <div class="adp-form-label">Data</div>
+              <input type="date" id="adp-data" class="adp-form-input">
+            </div>
+            <div>
+              <div class="adp-form-label">Saldo Bancário do Dia (R$)</div>
+              <input type="text" id="adp-saldo" class="adp-form-input" placeholder="Ex: 12.450,00">
+            </div>
+          </div>
+
+          <!-- Upload -->
+          <div class="adp-form-label" style="margin-bottom:6px">Arquivo (imagem ou Excel)</div>
+          <div class="adp-upload-zone" id="adp-drop-zone" onclick="document.getElementById('adp-file-input').click()"
+            ondragover="event.preventDefault();this.classList.add('drag')"
+            ondragleave="this.classList.remove('drag')"
+            ondrop="adpHandleDrop(event)">
+            <div class="adp-upload-zone-icon">📎</div>
+            <div class="adp-upload-zone-text"><strong>Clique ou arraste</strong> um arquivo aqui<br><span style="font-size:10px">JPG, PNG, XLS, XLSX aceitos</span></div>
+          </div>
+          <input type="file" id="adp-file-input" accept="image/*,.xls,.xlsx" style="display:none" onchange="adpHandleFile(this.files[0])">
+          <img id="adp-img-preview" class="adp-img-preview">
+          <div id="adp-file-info" style="font-size:11px;color:var(--text2);margin-top:4px"></div>
+
+          <!-- Lista de despesas extraídas/manuais -->
+          <div style="margin-top:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div class="adp-form-label" style="margin-bottom:0">Despesas</div>
+              <button onclick="adpAdicionarLinhaDespesa()" style="font-size:11px;color:var(--vinho);background:none;border:none;cursor:pointer;font-family:var(--font-body);font-weight:700">＋ Adicionar linha</button>
+            </div>
+            <div class="adp-despesas-list" id="adp-despesas-list"></div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <button onclick="adpSalvar()" style="flex:1;padding:9px;background:var(--vinho);color:var(--marfim);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">💾 Salvar</button>
+            <button onclick="adpFecharForm()" style="padding:9px 16px;background:none;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--font-body)">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cards por dia -->
+      <div id="adp-cards-wrap"></div>
+
+    </div>
+
+    <!-- Notificação flutuante -->
+    <div id="adp-notif" class="adp-notif-banner" style="display:none">
+      <div class="adp-notif-icon">🔔</div>
+      <div class="adp-notif-body">
+        <div class="adp-notif-title" id="adp-notif-title">Aprovação pendente!</div>
+        <div class="adp-notif-msg" id="adp-notif-msg"></div>
+      </div>
+      <button class="adp-notif-close" onclick="adpFecharNotif()">×</button>
+    </div>
+
   </div>
 
 </div><!-- /main -->
@@ -6271,24 +6396,32 @@ function aprovContarAbertos(grupoId){
 }
 
 function aprovRenderSubAbas(){
-  ['entradas','trocas'].forEach(id => {
+  ['entradas','trocas','despesas'].forEach(id => {
     const btn = document.getElementById(`aprov-subtab-${id}`);
     if(btn){
       const ativo = aprovSubAba === id;
       btn.style.background = ativo ? 'var(--vinho)' : 'var(--surface2)';
       btn.style.color = ativo ? 'var(--marfim)' : 'var(--text2)';
       btn.style.borderColor = ativo ? 'var(--vinho)' : 'var(--border)';
-      const abertos = aprovContarAbertos(id);
-      const label = id === 'entradas' ? '💵 Entradas' : '🔄 Trocas';
-      btn.textContent = abertos > 0 ? `${label}  ${abertos}` : label;
+      if(id !== 'despesas'){
+        const abertos = aprovContarAbertos(id);
+        const label = id === 'entradas' ? '💵 Entradas' : '🔄 Trocas';
+        btn.textContent = abertos > 0 ? `${label}  ${abertos}` : label;
+      }
     }
   });
+  // mostrar/ocultar painéis
+  const board = document.getElementById('aprov-board');
+  const desp = document.getElementById('aprov-subtab-despesas-panel');
+  if(board) board.style.display = aprovSubAba !== 'despesas' ? '' : 'none';
+  if(desp) desp.style.display = aprovSubAba === 'despesas' ? '' : 'none';
 }
 
 function aprovTrocarSubAba(id){
   aprovSubAba = id;
   aprovRenderSubAbas();
-  aprovRenderBoard();
+  if(id === 'despesas') adpRender();
+  else aprovRenderBoard();
 }
 
 function aprovRenderBoard(){
@@ -6549,6 +6682,432 @@ concRestaurarTodos();
 
 // Pré-cria os 12 meses do extrato — script está no fim do body, DOM já existe
 extratoInit();
+
+// ══════════════════════════════════════════════════════════════════════
+// APROVAÇÃO DE DESPESAS
+// ══════════════════════════════════════════════════════════════════════
+// Usuários que podem ADICIONAR movimentações
+const ADP_USUARIOS_ADD = ['Dra. Mone', 'Financeiro'];
+// Usuário que pode APROVAR
+const ADP_USUARIO_APROV = 'Dra. Mone';
+
+let adpData = JSON.parse(localStorage.getItem('adpData') || '{}');
+// estrutura: { 'YYYY-MM-DD': { saldo, despesas:[{desc,valor}], arquivo:{nome,tipo,base64?}, adicionadoEm, aprovadoPor, aprovadoEm, criadoPor } }
+
+let adpMesAtivo = null;
+let adpNotifTimers = {};
+
+function adpSalvar(){ localStorage.setItem('adpData', JSON.stringify(adpData)); }
+
+function adpMeses(){
+  const meses = {};
+  Object.keys(adpData).sort().forEach(k => {
+    const m = k.slice(0,7);
+    if(!meses[m]) meses[m] = { label: adpFmtMes(m), dias: [] };
+    meses[m].dias.push(k);
+  });
+  return meses;
+}
+
+function adpFmtMes(ym){
+  const [y,m] = ym.split('-');
+  const nomes = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return `${nomes[+m]} ${y}`;
+}
+
+function adpFmtData(d){
+  if(!d) return '';
+  const [y,m,dd] = d.split('-');
+  return `${dd}/${m}/${y}`;
+}
+
+function adpParseValor(v){
+  if(!v) return 0;
+  return parseFloat(String(v).replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+}
+
+function adpFmtValor(v){
+  return `R$ ${(+v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.')}`;
+}
+
+function adpInicializarMesAtivo(){
+  const meses = Object.keys(adpMeses()).sort();
+  if(!adpMesAtivo || !meses.includes(adpMesAtivo)){
+    const now = new Date();
+    const curr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    adpMesAtivo = meses.includes(curr) ? curr : (meses[meses.length-1] || curr);
+  }
+}
+
+// ── Render principal ──
+function adpRender(){
+  adpInicializarMesAtivo();
+  adpRenderKpis();
+  adpRenderNavMeses();
+  adpRenderCards();
+  adpRenderAddWrap();
+}
+
+function adpRenderAddWrap(){
+  const wrap = document.getElementById('adp-add-wrap');
+  if(!wrap) return;
+  wrap.style.display = ADP_USUARIOS_ADD.includes(aprovUsuario) ? '' : 'none';
+}
+
+function adpRenderKpis(){
+  const el = document.getElementById('adp-kpis');
+  if(!el) return;
+  const todos = Object.values(adpData);
+  const totalDespesas = todos.reduce((s,d) => s + (d.despesas||[]).length, 0);
+  const totalValor = todos.reduce((s,d) => s + (d.despesas||[]).reduce((ss,i) => ss + adpParseValor(i.valor), 0), 0);
+  const mediaDia = todos.length > 0 ? totalValor / todos.length : 0;
+
+  // dia com maior movimentação
+  let maiorDia = '', maiorVal = 0;
+  Object.entries(adpData).forEach(([k,d]) => {
+    const v = (d.despesas||[]).reduce((s,i) => s + adpParseValor(i.valor), 0);
+    if(v > maiorVal){ maiorVal = v; maiorDia = k; }
+  });
+
+  el.innerHTML = `
+    <div class="adp-kpi"><div class="adp-kpi-label">Nº de Despesas</div><div class="adp-kpi-value">${totalDespesas}</div><div class="adp-kpi-sub">em ${todos.length} dia${todos.length!==1?'s':''}</div></div>
+    <div class="adp-kpi"><div class="adp-kpi-label">Valor Total</div><div class="adp-kpi-value" style="font-size:16px">${adpFmtValor(totalValor)}</div></div>
+    <div class="adp-kpi"><div class="adp-kpi-label">Dia com Maior Movimentação</div><div class="adp-kpi-value" style="font-size:15px">${maiorDia?adpFmtData(maiorDia):'—'}</div><div class="adp-kpi-sub">${maiorDia?adpFmtValor(maiorVal):''}</div></div>
+    <div class="adp-kpi"><div class="adp-kpi-label">Média por Dia</div><div class="adp-kpi-value" style="font-size:16px">${adpFmtValor(mediaDia)}</div></div>`;
+}
+
+function adpRenderNavMeses(){
+  const nav = document.getElementById('adp-nav-meses');
+  if(!nav) return;
+  const meses = adpMeses();
+  const keys = Object.keys(meses).sort();
+
+  // garante que o mês atual sempre aparece
+  const now = new Date();
+  const curr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  if(!keys.includes(curr)) keys.push(curr);
+
+  nav.innerHTML = keys.sort().map(k => {
+    const ativo = k === adpMesAtivo;
+    return `<button onclick="adpMudarMes('${k}')" style="padding:3px 12px;border-radius:16px;border:1px solid ${ativo?'var(--vinho)':'var(--border)'};background:${ativo?'var(--vinho)':'var(--surface2)'};color:${ativo?'var(--marfim)':'var(--text2)'};font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font-body)">${adpFmtMes(k)}</button>`;
+  }).join('');
+}
+
+function adpMudarMes(k){ adpMesAtivo = k; adpRender(); }
+
+function adpRenderCards(){
+  const wrap = document.getElementById('adp-cards-wrap');
+  if(!wrap) return;
+  const meses = adpMeses();
+  const dias = (meses[adpMesAtivo]?.dias || []).sort().reverse();
+
+  if(dias.length === 0){
+    wrap.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text2);font-size:12px">Nenhuma movimentação registrada para este mês.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = dias.map(dia => {
+    const d = adpData[dia];
+    const despesas = d.despesas || [];
+    const totalDia = despesas.reduce((s,i) => s + adpParseValor(i.valor), 0);
+    const aprovado = !!d.aprovadoPor;
+    const pendente = !aprovado;
+    const podeAprovar = aprovUsuario === ADP_USUARIO_APROV;
+
+    const despHtml = despesas.map((dep,i) => `
+      <div class="adp-despesa-row">
+        <div class="adp-despesa-desc">${i+1}. ${dep.desc||'—'}</div>
+        <div class="adp-despesa-val">${adpFmtValor(adpParseValor(dep.valor))}</div>
+      </div>`).join('');
+
+    const imgHtml = d.arquivo && d.arquivo.tipo && d.arquivo.tipo.startsWith('image/') && d.arquivo.base64
+      ? `<div style="margin-top:10px"><img src="${d.arquivo.base64}" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border);object-fit:contain" alt="Comprovante"></div>`
+      : d.arquivo && d.arquivo.nome
+        ? `<div style="margin-top:8px;font-size:11px;color:var(--text2)">📎 ${d.arquivo.nome}</div>`
+        : '';
+
+    return `
+    <div class="adp-day-card">
+      <div class="adp-day-header">
+        <div>
+          <div class="adp-day-date">📅 ${adpFmtData(dia)}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">Adicionado por: <strong>${d.criadoPor||'—'}</strong></div>
+        </div>
+        <div class="adp-day-meta">
+          <span class="adp-day-badge" style="background:rgba(139,45,66,.1);color:var(--vinho)">${despesas.length} despesa${despesas.length!==1?'s':''}</span>
+          <span class="adp-day-badge" style="background:rgba(139,45,66,.15);color:var(--vinho);font-size:11px;font-weight:800">${adpFmtValor(totalDia)}</span>
+          ${d.saldo?`<span class="adp-day-badge" style="background:rgba(22,101,52,.08);color:#166534">Saldo: ${adpFmtValor(adpParseValor(d.saldo))}</span>`:''}
+        </div>
+      </div>
+      <div class="adp-day-body">
+        ${despHtml}
+        ${imgHtml}
+      </div>
+      <div class="adp-status-bar">
+        ${aprovado
+          ? `<span class="adp-approved-tag">✅ Aprovado por ${d.aprovadoPor} em ${adpFmtData(d.aprovadoEm?.split('T')[0])}</span>`
+          : `<span class="adp-pending-tag">⏳ Aguardando aprovação</span>`
+        }
+        ${pendente && podeAprovar
+          ? `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-left:auto;font-size:12px;font-weight:700;color:#166534">
+              <input type="checkbox" onchange="adpAprovar('${dia}',this.checked)" style="accent-color:#166534;width:15px;height:15px;cursor:pointer">
+              Confirmar aprovação de despesas
+            </label>`
+          : ''
+        }
+        ${ADP_USUARIOS_ADD.includes(aprovUsuario) ? `<button onclick="adpExcluirDia('${dia}')" style="margin-left:auto;background:none;border:none;color:var(--text2);font-size:12px;cursor:pointer;padding:0" title="Remover">🗑</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Formulário ──
+function adpAbrirForm(){
+  if(!ADP_USUARIOS_ADD.includes(aprovUsuario)){
+    alert('Você não tem permissão para adicionar movimentações.');
+    return;
+  }
+  const hoje = new Date().toISOString().split('T')[0];
+  document.getElementById('adp-data').value = hoje;
+  document.getElementById('adp-saldo').value = '';
+  document.getElementById('adp-file-info').textContent = '';
+  document.getElementById('adp-img-preview').style.display = 'none';
+  document.getElementById('adp-img-preview').src = '';
+  adpDespesasTemp = [];
+  adpRenderLinhasDespesa();
+  adpAdicionarLinhaDespesa();
+  document.getElementById('adp-form-wrap').style.display = '';
+  document.getElementById('adp-add-wrap').style.display = 'none';
+  document.getElementById('adp-form-wrap').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function adpFecharForm(){
+  document.getElementById('adp-form-wrap').style.display = 'none';
+  document.getElementById('adp-add-wrap').style.display = ADP_USUARIOS_ADD.includes(aprovUsuario) ? '' : 'none';
+}
+
+let adpDespesasTemp = [];
+let adpArquivoTemp = null;
+
+function adpRenderLinhasDespesa(){
+  const list = document.getElementById('adp-despesas-list');
+  if(!list) return;
+  list.innerHTML = adpDespesasTemp.map((d,i) => `
+    <div class="adp-despesa-item">
+      <input type="text" class="adp-form-input" placeholder="Descrição da despesa" value="${d.desc||''}"
+        oninput="adpDespesasTemp[${i}].desc=this.value"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();adpAdicionarLinhaDespesa();}">
+      <input type="text" class="adp-form-input" placeholder="R$ 0,00" value="${d.valor||''}" style="max-width:120px"
+        oninput="adpDespesasTemp[${i}].valor=this.value"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();adpAdicionarLinhaDespesa();}">
+      <button onclick="adpRemoverLinhaDespesa(${i})" style="padding:4px 8px;font-size:14px;background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text2)">×</button>
+    </div>`).join('');
+}
+
+function adpAdicionarLinhaDespesa(){
+  adpDespesasTemp.push({desc:'',valor:''});
+  adpRenderLinhasDespesa();
+  // foca o último input
+  const inputs = document.querySelectorAll('#adp-despesas-list .adp-despesa-item input');
+  if(inputs.length > 0) inputs[inputs.length-2].focus();
+}
+
+function adpRemoverLinhaDespesa(i){
+  adpDespesasTemp.splice(i,1);
+  adpRenderLinhasDespesa();
+}
+
+// ── Upload de arquivo ──
+function adpHandleDrop(e){
+  e.preventDefault();
+  document.getElementById('adp-drop-zone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if(f) adpHandleFile(f);
+}
+
+function adpHandleFile(file){
+  if(!file) return;
+  adpArquivoTemp = { nome: file.name, tipo: file.type };
+  document.getElementById('adp-file-info').textContent = `📎 ${file.name}`;
+
+  if(file.type.startsWith('image/')){
+    const reader = new FileReader();
+    reader.onload = e => {
+      adpArquivoTemp.base64 = e.target.result;
+      const img = document.getElementById('adp-img-preview');
+      img.src = e.target.result;
+      img.style.display = '';
+    };
+    reader.readAsDataURL(file);
+  } else if(file.name.match(/\.xlsx?$/i)){
+    // Tenta extrair dados via SheetJS se disponível
+    if(window.XLSX){
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const wb = XLSX.read(e.target.result, {type:'array', raw:false});
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+          adpExtrairDespesasExcel(rows);
+        } catch(err){ console.warn('XLSX parse error', err); }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  }
+}
+
+function adpExtrairDespesasExcel(rows){
+  // Heurística: encontra colunas de descrição e valor
+  if(!rows || rows.length < 2) return;
+  const header = rows[0].map(c => String(c).toLowerCase());
+  const descIdx = header.findIndex(h => /desc|nome|hist|desp|item|lanc/.test(h));
+  const valIdx  = header.findIndex(h => /valor|vl|total|r\$|amount/.test(h));
+  if(descIdx < 0 && valIdx < 0) return;
+
+  const novas = [];
+  for(let i=1;i<rows.length;i++){
+    const row = rows[i];
+    const desc = descIdx >= 0 ? String(row[descIdx]||'').trim() : '';
+    const valor = valIdx >= 0 ? String(row[valIdx]||'').trim() : '';
+    if(desc || valor) novas.push({desc, valor});
+  }
+  if(novas.length > 0){
+    adpDespesasTemp = [...adpDespesasTemp.filter(d => d.desc||d.valor), ...novas];
+    adpRenderLinhasDespesa();
+  }
+}
+
+// ── Salvar movimentação ──
+function adpSalvarMovimentacao(){
+  const data = document.getElementById('adp-data').value;
+  if(!data){ alert('Informe a data.'); return; }
+  const saldo = document.getElementById('adp-saldo').value.trim();
+  const despesas = adpDespesasTemp.filter(d => d.desc || d.valor);
+  if(despesas.length === 0){ alert('Adicione ao menos uma despesa.'); return; }
+
+  adpData[data] = {
+    saldo,
+    despesas,
+    arquivo: adpArquivoTemp || null,
+    criadoPor: aprovUsuario,
+    adicionadoEm: new Date().toISOString(),
+    aprovadoPor: null,
+    aprovadoEm: null
+  };
+  adpSalvar();
+  adpArquivoTemp = null;
+  adpFecharForm();
+
+  // Ajusta mês ativo para o mês da data inserida
+  adpMesAtivo = data.slice(0,7);
+  adpRender();
+
+  // Dispara notificação imediata para Dra. Mone
+  adpNotificar(data, 'imediata');
+  // Agenda renotificações a cada 3h enquanto não aprovado
+  adpAgendarRenotificacao(data);
+}
+
+// ── Aprovar ──
+function adpAprovar(dia, checked){
+  if(aprovUsuario !== ADP_USUARIO_APROV){
+    adpRenderCards();
+    return;
+  }
+  if(!adpData[dia]) return;
+  if(checked){
+    adpData[dia].aprovadoPor = aprovUsuario;
+    adpData[dia].aprovadoEm = new Date().toISOString();
+    // cancela renotificação
+    if(adpNotifTimers[dia]){ clearInterval(adpNotifTimers[dia]); delete adpNotifTimers[dia]; }
+  } else {
+    adpData[dia].aprovadoPor = null;
+    adpData[dia].aprovadoEm = null;
+    adpAgendarRenotificacao(dia);
+  }
+  adpSalvar();
+  adpRenderCards();
+  adpRenderKpis();
+}
+
+// ── Excluir dia ──
+function adpExcluirDia(dia){
+  if(!confirm(`Remover movimentação de ${adpFmtData(dia)}?`)) return;
+  if(adpNotifTimers[dia]){ clearInterval(adpNotifTimers[dia]); delete adpNotifTimers[dia]; }
+  delete adpData[dia];
+  adpSalvar();
+  adpRender();
+}
+
+// ── Notificações ──
+function adpNotificar(dia, tipo){
+  if(aprovUsuario === ADP_USUARIO_APROV || !document.getElementById('adp-notif')) return;
+  // Só notifica se Dra. Mone estiver ativa ou sempre visível
+  const d = adpData[dia];
+  if(!d || d.aprovadoPor) return;
+  const total = (d.despesas||[]).reduce((s,i) => s + adpParseValor(i.valor), 0);
+  const msg = tipo === 'imediata'
+    ? `Nova movimentação adicionada por ${d.criadoPor} para ${adpFmtData(dia)}. ${(d.despesas||[]).length} despesa(s) — ${adpFmtValor(total)}.`
+    : `Lembrete: movimentação de ${adpFmtData(dia)} ainda aguarda sua aprovação (${adpFmtValor(total)}).`;
+  adpMostrarNotif('🔔 Aprovação Pendente!', msg);
+}
+
+function adpMostrarNotif(titulo, msg){
+  const el = document.getElementById('adp-notif');
+  if(!el) return;
+  document.getElementById('adp-notif-title').textContent = titulo;
+  document.getElementById('adp-notif-msg').textContent = msg;
+  el.style.display = 'flex';
+  // auto-fecha em 12s
+  clearTimeout(adpMostrarNotif._t);
+  adpMostrarNotif._t = setTimeout(() => { if(el) el.style.display='none'; }, 12000);
+}
+
+function adpFecharNotif(){
+  const el = document.getElementById('adp-notif');
+  if(el) el.style.display = 'none';
+}
+
+function adpAgendarRenotificacao(dia){
+  if(adpNotifTimers[dia]) clearInterval(adpNotifTimers[dia]);
+  adpNotifTimers[dia] = setInterval(() => {
+    const d = adpData[dia];
+    if(!d || d.aprovadoPor){ clearInterval(adpNotifTimers[dia]); delete adpNotifTimers[dia]; return; }
+    adpNotificar(dia, 'lembrete');
+  }, 3 * 60 * 60 * 1000); // 3 horas
+}
+
+// ── Verificar pendentes ao trocar usuário ──
+function adpVerificarPendentesAoEntrar(){
+  if(aprovUsuario !== ADP_USUARIO_APROV) return;
+  const pendentes = Object.entries(adpData).filter(([,d]) => !d.aprovadoPor);
+  if(pendentes.length === 0) return;
+  const total = pendentes.reduce((s,[,d]) => s + (d.despesas||[]).reduce((ss,i) => ss + adpParseValor(i.valor), 0), 0);
+  adpMostrarNotif(
+    `🔔 ${pendentes.length} movimentação(ões) aguardando aprovação`,
+    `Total pendente: ${adpFmtValor(total)}. Acesse a aba Aprovação de Despesas.`
+  );
+  // agenda renotificação para cada pendente
+  pendentes.forEach(([dia]) => adpAgendarRenotificacao(dia));
+}
+
+// Patch em aprovSetUsuario para verificar pendentes ao logar como Dra. Mone
+const _adpOrigSetUsuario = window.aprovSetUsuario;
+window.aprovSetUsuario = function(){
+  if(_adpOrigSetUsuario) _adpOrigSetUsuario();
+  setTimeout(adpVerificarPendentesAoEntrar, 300);
+};
+
+// alias para o botão salvar do form
+window.adpSalvar = adpSalvarMovimentacao;
+
+// ── Init ──
+function adpInit(){
+  adpInicializarMesAtivo();
+  adpVerificarPendentesAoEntrar();
+}
+
+adpInit();
 
 // Inicializa aprovações
 aprovInit();
