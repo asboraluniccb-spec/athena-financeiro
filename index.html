@@ -6962,7 +6962,7 @@ extratoInit();
 // APROVAÇÃO DE DESPESAS
 // ══════════════════════════════════════════════════════════════════════
 // Usuários que podem ADICIONAR movimentações
-const ADP_USUARIOS_ADD = ['Dra. Mone', 'Financeiro'];
+const ADP_USUARIOS_ADD = ['Financeiro']; // Dra. Mone é apenas aprovadora, não adiciona
 // Usuário que pode APROVAR
 const ADP_USUARIO_APROV = 'Dra. Mone';
 
@@ -7162,12 +7162,11 @@ function adpRenderCards(){
       </div>`;
     }
 
-    // ── Grid de colunas ──
-    const cols = '140px 1fr 120px 110px';
+    // ── Grid de colunas: Descrição | Valor | Método ──
+    const cols = '1fr 120px 80px';
 
     const colHeader = `
       <div style="display:grid;grid-template-columns:${cols};gap:8px;padding:6px 0 6px;border-bottom:2px solid var(--border);margin-bottom:0">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Categoria</span>
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Descrição</span>
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);text-align:right">Valor</span>
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Método</span>
@@ -7175,19 +7174,18 @@ function adpRenderCards(){
 
     const despHtml = despesas.map(dep => {
       const dtLine = dep.dt ? `<div style="font-size:10px;color:var(--text2);margin-top:2px">Venc. ${dep.dt}</div>` : '';
+      const catLine = dep.cat ? `<div style="font-size:10px;color:var(--text2);margin-top:1px">${dep.cat}</div>` : '';
       return `
       <div style="display:grid;grid-template-columns:${cols};gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:start">
-        <div style="font-size:11px;font-weight:700;color:var(--text)">${dep.cat||'—'}</div>
-        <div style="font-size:12px;color:var(--text);word-break:break-word;white-space:normal;line-height:1.4">${dep.desc||'—'}${dtLine}</div>
+        <div style="font-size:12px;color:var(--text);word-break:break-word;white-space:normal;line-height:1.4">${dep.desc||'—'}${catLine}${dtLine}</div>
         <div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right;white-space:nowrap">${adpFmtValor(adpParseValor(dep.valor))}</div>
-        <div style="font-size:11px;color:var(--gray)">${dep.metodo||'—'}</div>
+        <div style="font-size:11px;color:var(--gray);word-break:break-word">${dep.metodo||'—'}</div>
       </div>`;
     }).join('');
 
     // Linha de total
     const totalRow = `
       <div style="display:grid;grid-template-columns:${cols};gap:8px;padding:8px 0 0;border-top:2px solid var(--border);margin-top:2px">
-        <div></div>
         <div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">Total das despesas</div>
         <div style="font-size:14px;font-weight:800;color:var(--vinho);text-align:right">${adpFmtValor(totalDia)}</div>
         <div></div>
@@ -7198,7 +7196,7 @@ function adpRenderCards(){
       : d.arquivo && d.arquivo.nome ? `<div style="margin-top:8px;font-size:11px;color:var(--text2)">📎 ${d.arquivo.nome}</div>` : '';
 
     return `
-    <div class="adp-day-card" id="adp-card-${dia}">
+    <div class="adp-day-card" id="adp-card-${dia}" data-adp-dia="${dia}">
       <div class="adp-day-header">
         <div>
           <div class="adp-day-date">📅 Despesas (${adpFmtData(dia)})</div>
@@ -7215,8 +7213,11 @@ function adpRenderCards(){
         ${imgHtml}
       </div>
       ${podeAprovar ? `
-      <div class="adp-status-bar" style="justify-content:flex-end">
-        <button onclick="adpAprovarDia('${dia}')" style="padding:8px 22px;background:#166534;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">✅ Confirmar Aprovação</button>
+      <div class="adp-status-bar" style="justify-content:flex-end;padding:12px 16px">
+        <button onclick="adpAprovarDia('${dia}')"
+          style="padding:9px 24px;background:#166534;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-body);letter-spacing:.03em">
+          ✅ Confirmar Aprovação
+        </button>
       </div>` : ''}
     </div>`;
   }).join('');
@@ -7227,13 +7228,14 @@ function adpToggleCard(dia){
   if(!d) return;
   const despesas = d.despesas||[];
   const totalDia = despesas.reduce((s,i)=>s+adpParseValor(i.valor),0);
-  const cols = '140px 1fr 120px 110px';
-  const colHeader = `<div style="display:grid;grid-template-columns:${cols};gap:8px;padding:6px 0 6px;border-bottom:2px solid var(--border)"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Categoria</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Descrição</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);text-align:right">Valor</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Método</span></div>`;
+  const cols = '1fr 120px 80px';
+  const colHeader = `<div style="display:grid;grid-template-columns:${cols};gap:8px;padding:6px 0 6px;border-bottom:2px solid var(--border)"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Descrição</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);text-align:right">Valor</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Método</span></div>`;
   const rows = despesas.map(dep=>{
     const dtLine = dep.dt?`<div style="font-size:10px;color:var(--text2);margin-top:2px">Venc. ${dep.dt}</div>`:'';
-    return `<div style="display:grid;grid-template-columns:${cols};gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:start"><div style="font-size:11px;font-weight:700;color:var(--text)">${dep.cat||'—'}</div><div style="font-size:12px;color:var(--text);word-break:break-word;white-space:normal;line-height:1.4">${dep.desc||'—'}${dtLine}</div><div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right">${adpFmtValor(adpParseValor(dep.valor))}</div><div style="font-size:11px;color:var(--gray)">${dep.metodo||'—'}</div></div>`;
+    const catLine = dep.cat?`<div style="font-size:10px;color:var(--text2);margin-top:1px">${dep.cat}</div>`:'';
+    return `<div style="display:grid;grid-template-columns:${cols};gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:start"><div style="font-size:12px;color:var(--text);word-break:break-word;white-space:normal;line-height:1.4">${dep.desc||'—'}${catLine}${dtLine}</div><div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right">${adpFmtValor(adpParseValor(dep.valor))}</div><div style="font-size:11px;color:var(--gray);word-break:break-word">${dep.metodo||'—'}</div></div>`;
   }).join('');
-  const totalRow = `<div style="display:grid;grid-template-columns:${cols};gap:8px;padding:8px 0 0;border-top:2px solid var(--border)"><div></div><div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">Total das despesas</div><div style="font-size:14px;font-weight:800;color:var(--vinho);text-align:right">${adpFmtValor(totalDia)}</div><div></div></div>`;
+  const totalRow = `<div style="display:grid;grid-template-columns:${cols};gap:8px;padding:8px 0 0;border-top:2px solid var(--border)"><div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">Total das despesas</div><div style="font-size:14px;font-weight:800;color:var(--vinho);text-align:right">${adpFmtValor(totalDia)}</div><div></div></div>`;
   const saldoLine = d.saldo?`<div style="font-size:11px;color:#166534;margin-top:4px;font-weight:600">💰 Saldo do dia: ${adpFmtValor(adpParseValor(d.saldo))}</div>`:'';
   const el = document.getElementById(`adp-card-${dia}`) || document.querySelector(`[onclick="adpToggleCard('${dia}')"]`)?.closest('.adp-day-card');
   if(el) el.outerHTML = `<div class="adp-day-card" id="adp-card-${dia}">
@@ -7254,23 +7256,30 @@ function adpAprovarDia(dia){
     return;
   }
   if(!adpData[dia]) return;
-  // Mostra confirmação inline no próprio card em vez de confirm()
-  const card = document.getElementById('adp-card-'+dia);
-  if(card){
-    const existing = card.querySelector('.adp-confirm-bar');
-    if(existing){ existing.remove(); return; }
-    const bar = document.createElement('div');
-    bar.className = 'adp-confirm-bar';
-    bar.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:10px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0';
-    bar.innerHTML = `
-      <span style="font-size:12px;color:#166534;font-weight:600">Confirmar aprovação das despesas de ${adpFmtData(dia)}?</span>
-      <button onclick="adpExecutarAprovacao('${dia}')" style="padding:7px 18px;background:#166534;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">✅ Sim, aprovar</button>
-      <button onclick="this.closest('.adp-confirm-bar').remove()" style="padding:7px 14px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer;font-family:var(--font-body)">Cancelar</button>`;
-    card.appendChild(bar);
-    return;
-  }
-  // Fallback se card não encontrado
-  adpExecutarAprovacao(dia);
+  // Busca o card pelo id ou pelo atributo data-dia
+  const card = document.getElementById('adp-card-'+dia)
+    || document.querySelector('[data-adp-dia="'+dia+'"]');
+  if(!card){ adpExecutarAprovacao(dia); return; }
+
+  // Toggle: se já tem barra de confirmação, remove
+  const existing = card.querySelector('.adp-confirm-bar');
+  if(existing){ existing.remove(); return; }
+
+  // Remove qualquer outra barra aberta em outros cards
+  document.querySelectorAll('.adp-confirm-bar').forEach(b => b.remove());
+
+  const bar = document.createElement('div');
+  bar.className = 'adp-confirm-bar';
+  bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:#f0fdf4;border-top:2px solid #86efac;flex-wrap:wrap';
+  bar.innerHTML = `
+    <span style="font-size:12px;color:#166534;font-weight:600">Confirmar aprovação das despesas de <strong>${adpFmtData(dia)}</strong>?</span>
+    <div style="display:flex;gap:8px">
+      <button style="padding:8px 20px;background:#166534;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)"
+        onclick="adpExecutarAprovacao('${dia}')">✅ Sim, aprovar</button>
+      <button style="padding:8px 14px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer;font-family:var(--font-body)"
+        onclick="this.closest('.adp-confirm-bar').remove()">Cancelar</button>
+    </div>`;
+  card.appendChild(bar);
 }
 
 function adpExecutarAprovacao(dia){
