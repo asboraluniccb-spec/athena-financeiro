@@ -1390,21 +1390,18 @@
             </div>
           </div>
 
-          <!-- Upload — sempre visível -->
-          <div class="adp-form-label" style="margin-bottom:6px;margin-top:4px">
-            Comprovante / Planilha
-            <span style="font-weight:400;text-transform:none;font-size:10px;margin-left:4px">(Excel importa despesas automaticamente)</span>
-          </div>
-          <div class="adp-upload-zone" id="adp-drop-zone"
-            onclick="document.getElementById('adp-file-input').click()"
-            ondragover="event.preventDefault();this.classList.add('drag')"
-            ondragleave="this.classList.remove('drag')"
-            ondrop="adpHandleDrop(event)">
-            <div class="adp-upload-zone-icon">📎</div>
-            <div class="adp-upload-zone-text">
-              <strong>Clique ou arraste</strong> um arquivo aqui<br>
-              <span style="font-size:10px">JPG · PNG · XLS · XLSX</span>
-            </div>
+          <!-- Upload — compacto -->
+          <div style="display:flex;align-items:center;gap:10px;margin-top:4px;margin-bottom:4px;flex-wrap:wrap"
+            ondragover="event.preventDefault();document.getElementById('adp-drop-zone').classList.add('drag')"
+            ondragleave="document.getElementById('adp-drop-zone').classList.remove('drag')"
+            ondrop="adpHandleDrop(event)" id="adp-drop-zone">
+            <button onclick="document.getElementById('adp-file-input').click()"
+              style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--surface2);border:1px dashed var(--border);border-radius:8px;font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font-body);transition:all .2s"
+              onmouseover="this.style.borderColor='var(--vinho)';this.style.color='var(--vinho)'"
+              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+              📎 Importar Excel / Imagem
+            </button>
+            <span style="font-size:10px;color:var(--text2)">(arrastar também funciona)</span>
           </div>
           <input type="file" id="adp-file-input" accept="image/*,.xls,.xlsx" style="display:none" onchange="adpHandleFile(this.files[0])">
           <img id="adp-img-preview" class="adp-img-preview">
@@ -1420,7 +1417,7 @@
           </div>
 
           <div id="adp-save-btns" style="display:flex;gap:8px;margin-top:14px">
-            <button onclick="adpSalvar()" style="flex:1;padding:9px;background:var(--vinho);color:var(--marfim);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">💾 Salvar Movimentação</button>
+            <button onclick="adpSalvarMovimentacao()" style="flex:1;padding:9px;background:var(--vinho);color:var(--marfim);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">💾 Salvar Movimentação</button>
           </div>
         </div>
       </div>
@@ -6764,7 +6761,7 @@ function adpRender(){
   const dataEl = document.getElementById('adp-data');
   if(dataEl && !dataEl.value) dataEl.value = new Date().toISOString().split('T')[0];
   // garante ao menos uma linha de despesa
-  if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',valor:''}]; adpRenderLinhasDespesa(); }
+  if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',cat:'',metodo:'',dt:'',valor:''}]; adpRenderLinhasDespesa(); }
   // atualiza indicador de chave Gemini
   const cfgBtn = document.getElementById('adp-config-btn');
   if(cfgBtn){
@@ -6857,11 +6854,18 @@ function adpRenderCards(){
     const pendente = !aprovado;
     const podeAprovar = aprovUsuario === ADP_USUARIO_APROV;
 
-    const despHtml = despesas.map((dep,i) => `
+    const despHtml = despesas.map((dep,i) => {
+      const cat   = dep.cat   ? `<span style="font-size:10px;font-weight:700;color:var(--text2);background:var(--surface2);border-radius:5px;padding:1px 7px;margin-right:6px">${dep.cat}</span>` : '';
+      const metodo= dep.metodo? `<span style="font-size:10px;color:var(--gray);margin-left:6px;font-style:italic">${dep.metodo}</span>` : '';
+      const dt    = dep.dt    ? `<span style="font-size:10px;color:var(--text2);margin-left:6px">venc. ${dep.dt}</span>` : '';
+      return `
       <div class="adp-despesa-row">
-        <div class="adp-despesa-desc">${i+1}. ${dep.desc||'—'}</div>
+        <div class="adp-despesa-desc" style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:2px;flex:1">
+          ${cat}<span>${i+1}. ${dep.desc||'—'}</span>${dt}${metodo}
+        </div>
         <div class="adp-despesa-val">${adpFmtValor(adpParseValor(dep.valor))}</div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     const imgHtml = d.arquivo && d.arquivo.tipo && d.arquivo.tipo.startsWith('image/') && d.arquivo.base64
       ? `<div style="margin-top:10px"><img src="${d.arquivo.base64}" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border);object-fit:contain" alt="Comprovante"></div>`
@@ -6931,11 +6935,17 @@ function adpRenderLinhasDespesa(){
   const list = document.getElementById('adp-despesas-list');
   if(!list) return;
   list.innerHTML = adpDespesasTemp.map((d,i) => `
-    <div class="adp-despesa-item">
-      <input type="text" class="adp-form-input" placeholder="Descrição da despesa" value="${d.desc||''}"
+    <div class="adp-despesa-item" style="display:grid;grid-template-columns:1fr 1fr 1fr 90px 28px;gap:6px;align-items:center">
+      <input type="text" class="adp-form-input" placeholder="Descrição" value="${(d.desc||'').replace(/"/g,'&quot;')}"
         oninput="adpDespesasTemp[${i}].desc=this.value"
         onkeydown="if(event.key==='Enter'){event.preventDefault();adpAdicionarLinhaDespesa();}">
-      <input type="text" class="adp-form-input" placeholder="R$ 0,00" value="${d.valor||''}" style="max-width:120px"
+      <input type="text" class="adp-form-input" placeholder="Categoria" value="${(d.cat||'').replace(/"/g,'&quot;')}"
+        oninput="adpDespesasTemp[${i}].cat=this.value"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();adpAdicionarLinhaDespesa();}">
+      <input type="text" class="adp-form-input" placeholder="Método pagamento" value="${(d.metodo||'').replace(/"/g,'&quot;')}"
+        oninput="adpDespesasTemp[${i}].metodo=this.value"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();adpAdicionarLinhaDespesa();}">
+      <input type="text" class="adp-form-input" placeholder="R$ 0,00" value="${(d.valor||'').replace(/"/g,'&quot;')}"
         oninput="adpDespesasTemp[${i}].valor=this.value"
         onkeydown="if(event.key==='Enter'){event.preventDefault();adpAdicionarLinhaDespesa();}">
       <button onclick="adpRemoverLinhaDespesa(${i})" style="padding:4px 8px;font-size:14px;background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text2)">×</button>
@@ -6943,7 +6953,7 @@ function adpRenderLinhasDespesa(){
 }
 
 function adpAdicionarLinhaDespesa(){
-  adpDespesasTemp.push({desc:'',valor:''});
+  adpDespesasTemp.push({desc:'',cat:'',metodo:'',valor:''});
   adpRenderLinhasDespesa();
   // foca o último input
   const inputs = document.querySelectorAll('#adp-despesas-list .adp-despesa-item input');
@@ -6979,8 +6989,11 @@ function adpAplicarExtracao(dados){
   }
   if(dados.despesas && dados.despesas.length > 0){
     adpDespesasTemp = dados.despesas.map(d => ({
-      desc: d.desc || '',
-      valor: d.valor || ''
+      desc:   d.desc   || '',
+      cat:    d.cat    || '',
+      metodo: d.metodo || '',
+      dt:     d.dt     || '',
+      valor:  d.valor  || ''
     }));
     adpRenderLinhasDespesa();
   }
@@ -7032,7 +7045,7 @@ async function adpExtrairDeImagem(base64DataUrl, mimeType){
   const apiKey = localStorage.getItem('adp_gemini_key') || '';
   if(!apiKey){
     adpSetStatus('Imagem salva. Para extração automática, configure a chave Gemini nas ⚙ Configurações da aba.', false);
-    if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',valor:''}]; adpRenderLinhasDespesa(); }
+    if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',cat:'',metodo:'',dt:'',valor:''}]; adpRenderLinhasDespesa(); }
     return;
   }
   adpSetStatus('Analisando imagem com IA...', true);
@@ -7058,7 +7071,7 @@ Regras: liste TODAS as despesas/pagamentos/saídas visíveis. Valores somente co
     adpAplicarExtracao(JSON.parse(match[0]));
   } catch(e){
     adpSetStatus('Erro na análise da imagem. Preencha manualmente ou verifique a chave Gemini.', false);
-    if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',valor:''}]; adpRenderLinhasDespesa(); }
+    if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',cat:'',metodo:'',dt:'',valor:''}]; adpRenderLinhasDespesa(); }
   }
 }
 
@@ -7070,56 +7083,106 @@ function adpAbrirConfig(){
   alert(nova.trim() ? '✅ Chave salva! Agora imagens serão analisadas automaticamente.' : 'Chave removida.');
 }
 
+function adpNormValor(v){
+  if(!v) return '';
+  let s = String(v).replace(/R\$\s*/gi,'').replace(/\s/g,'').trim();
+  // 1.234,56 → 1234,56
+  if(/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(s)) s = s.replace(/\./g,'');
+  // 1234.56 → 1234,56
+  else if(/^\d+\.\d{1,2}$/.test(s)) s = s.replace('.',',');
+  return s;
+}
+
+function adpFindCol(header, patterns){
+  return header.findIndex(h => patterns.some(p => p.test(h)));
+}
+
 function adpExtrairDespesasExcel(rows){
-  if(!rows || rows.length < 1){ adpSetStatus('Planilha vazia.', false); return; }
+  if(!rows || rows.length < 2){ adpSetStatus('Planilha vazia ou sem dados.', false); return; }
 
-  // Normaliza cabeçalhos — trata planilha com ou sem header
-  const header = rows[0].map(c => String(c||'').toLowerCase().trim());
-
-  // Índices por heurística
-  const descIdx  = header.findIndex(h => /desc|historico|hist|nome|item|lanc|pagamento|fornecedor|beneficiario|destino/.test(h));
-  const valIdx   = header.findIndex(h => /valor|vl\b|vl_|debito|deb|saida|pagto|pago|amount|total/.test(h));
-  const saldoIdx = header.findIndex(h => /saldo/.test(h));
-
-  // Se não encontrou colunas, tenta identificar por conteúdo (planilha sem header)
-  let dataStart = 1;
-  if(descIdx < 0 && valIdx < 0){
-    // Tenta interpretar cada linha como (descrição, valor) — 2 colunas
-    dataStart = 0;
+  // Localiza linha de cabeçalho (primeira linha não-vazia)
+  let headerRow = -1;
+  for(let i = 0; i < Math.min(5, rows.length); i++){
+    if(rows[i] && rows[i].some(c => c && String(c).trim())) { headerRow = i; break; }
   }
+  if(headerRow < 0){ adpSetStatus('Não foi possível encontrar o cabeçalho.', false); return; }
+
+  const header = rows[headerRow].map(c => String(c||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim());
+
+  // Mapeia colunas conhecidas do arquivo
+  const catIdx    = adpFindCol(header, [/categ/,/tipo/]);
+  const descIdx   = adpFindCol(header, [/desc/,/historico/,/hist/,/nome/,/lancamento/,/lanc/,/pagamento/,/benefici/,/fornec/]);
+  const dtIdx     = adpFindCol(header, [/venc/,/data/,/dt/]);
+  const valIdx    = adpFindCol(header, [/valor/,/vl\b/,/debito/,/deb\b/,/saida/,/pagto/,/amount/]);
+  const metIdx    = adpFindCol(header, [/metodo/,/met\b/,/forma/,/pagamento/,/tipo.*pag/,/pag.*tipo/]);
+  const saldoIdx  = adpFindCol(header, [/saldo/]);
 
   const novas = [];
   let saldoEncontrado = null;
 
-  for(let i = dataStart; i < rows.length; i++){
+  for(let i = headerRow + 1; i < rows.length; i++){
     const row = rows[i];
-    if(!row || row.every(c => !c)) continue; // linha vazia
+    if(!row || row.every(c => !String(c||'').trim())) continue;
 
-    let desc  = descIdx >= 0  ? String(row[descIdx]  || '').trim() : String(row[0] || '').trim();
-    let valor = valIdx  >= 0  ? String(row[valIdx]   || '').trim() : String(row[1] || '').trim();
-    const saldoCell = saldoIdx >= 0 ? String(row[saldoIdx] || '').trim() : '';
+    const cat    = catIdx   >= 0 ? String(row[catIdx]  ||'').trim() : '';
+    const desc   = descIdx  >= 0 ? String(row[descIdx] ||'').trim() : String(row[0]||'').trim();
+    const dt     = dtIdx    >= 0 ? String(row[dtIdx]   ||'').trim() : '';
+    const valor  = valIdx   >= 0 ? adpNormValor(row[valIdx]) : adpNormValor(row[1]);
+    const metodo = metIdx   >= 0 ? String(row[metIdx]  ||'').trim() : '';
+    const saldo  = saldoIdx >= 0 ? adpNormValor(row[saldoIdx]) : '';
 
-    // Limpa valor: remove R$, espaços, converte ponto-milhar
-    valor = valor.replace(/R\$\s*/gi,'').replace(/\s/g,'');
-    // Normaliza: se vier 1.234,56 → 1234,56; se vier 1234.56 → 1234,56
-    if(/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(valor)) valor = valor.replace(/\./g,''); // remove pontos de milhar
-    else if(/^\d+\.\d{1,2}$/.test(valor)) valor = valor.replace('.',',');
+    // Pega o primeiro saldo encontrado (representa o saldo do dia)
+    if(saldo && !saldoEncontrado) saldoEncontrado = saldo;
 
-    if(saldoCell && !saldoEncontrado){
-      let sv = saldoCell.replace(/R\$\s*/gi,'').replace(/\s/g,'');
-      if(/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(sv)) sv = sv.replace(/\./g,'');
-      else if(/^\d+\.\d{1,2}$/.test(sv)) sv = sv.replace('.',',');
-      saldoEncontrado = sv;
-    }
+    // Ignora linhas sem descrição ou valor
+    if(!desc && !valor) continue;
+    if(desc.match(/^(descri|histor|nome|item|lanc|categ|metodo|forma|saldo|data|venc)/i)) continue;
 
-    if(desc && desc.length > 1 && !desc.match(/^(descrição|historico|descricao|item|nome|despesa)$/i)){
-      novas.push({ desc, valor });
-    }
+    novas.push({ cat, desc, dt, valor, metodo });
   }
 
-  if(novas.length === 0){ adpSetStatus('Nenhuma despesa encontrada na planilha.', false); return; }
+  if(novas.length === 0){
+    // Debug: mostra os cabeçalhos encontrados para diagnóstico
+    adpSetStatus(`Nenhuma despesa encontrada. Colunas detectadas: [${header.join(' | ')}]`, false);
+    return;
+  }
 
-  adpAplicarExtracao({ saldo: saldoEncontrado, despesas: novas });
+  // Salva automaticamente ao importar (sem precisar clicar Salvar)
+  const dataForm = document.getElementById('adp-data').value || new Date().toISOString().split('T')[0];
+  adpDespesasTemp = novas;
+  adpRenderLinhasDespesa();
+
+  // Preenche saldo se encontrado
+  const saldoEl = document.getElementById('adp-saldo');
+  if(saldoEl && saldoEncontrado && !saldoEl.value) saldoEl.value = saldoEncontrado;
+
+  adpSetStatus(`✅ ${novas.length} despesa${novas.length!==1?'s':''} importada${novas.length!==1?'s':''}  —  salvando automaticamente...`, false);
+
+  // Salva imediatamente
+  setTimeout(() => adpSalvarMovimentacaoAuto(dataForm, saldoEncontrado, novas), 300);
+}
+
+function adpSalvarMovimentacaoAuto(data, saldo, despesas){
+  if(!ADP_USUARIOS_ADD.includes(aprovUsuario)){
+    adpSetStatus('Dados importados. Selecione um usuário autorizado para salvar.', false);
+    return;
+  }
+  adpData[data] = {
+    saldo: saldo || document.getElementById('adp-saldo')?.value || '',
+    despesas,
+    arquivo: adpArquivoTemp || null,
+    criadoPor: aprovUsuario,
+    adicionadoEm: new Date().toISOString(),
+    aprovadoPor: null,
+    aprovadoEm: null
+  };
+  adpSalvar();
+  adpArquivoTemp = null;
+  adpMesAtivo = data.slice(0,7);
+  adpRender();
+  adpSetStatus(`✅ ${despesas.length} despesa${despesas.length!==1?'s':''} salva${despesas.length!==1?'s':''} em ${adpFmtData(data)}`, false);
+  adpNotificar(data, 'imediata');
+  adpAgendarRenotificacao(data);
 }
 
 // ── Salvar movimentação ──
