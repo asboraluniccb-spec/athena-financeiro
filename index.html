@@ -583,6 +583,7 @@
     <button class="tab" onclick="switchTab('conciliacao')">Conciliações</button>
     <button class="tab" onclick="switchTab('aprovacoes')">Aprovações</button>
     <button class="tab" onclick="switchTab('vendas')">Relacionamento</button>
+    <button class="tab" onclick="switchTab('despesas-v2')">Despesas V2</button>
   </div>
 </div>
 
@@ -1463,6 +1464,103 @@
     </div>
 
   </div>
+
+  <!-- ===== APROVAÇÃO DE DESPESAS V2 ===== -->
+  <div class="tab-content" id="tab-despesas-v2">
+
+    <!-- Login wall V2 -->
+    <div id="v2-login-wall" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:16px">
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--vinho);letter-spacing:.15em">Aprovação de Despesas</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Selecione seu perfil para continuar</div>
+      <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px">
+        <button onclick="v2Entrar('Dra. Mone')" style="padding:12px;background:var(--vinho);color:var(--marfim);border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-body);letter-spacing:.04em">Dra. Mone</button>
+        <button onclick="v2Entrar('Financeiro')" style="padding:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body)">Financeiro</button>
+        <button onclick="v2Entrar('Recepção')" style="padding:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body)">Recepção</button>
+        <button onclick="v2Entrar('Outro')" style="padding:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body)">Outro</button>
+      </div>
+    </div>
+
+    <!-- Conteúdo principal V2 -->
+    <div id="v2-main" style="display:none">
+
+      <!-- Cabeçalho com usuário + sair -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">
+          Aprovação de Despesas
+          <span style="font-size:11px;font-weight:400;color:var(--text2);margin-left:8px">Logado como: <strong id="v2-usuario-tag"></strong></span>
+        </div>
+        <button onclick="v2Sair()" style="font-size:11px;color:var(--text2);background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-family:var(--font-body)">Sair</button>
+      </div>
+
+      <!-- KPIs -->
+      <div id="v2-kpis" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px"></div>
+
+      <!-- Nav de meses -->
+      <div id="v2-nav-meses" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px"></div>
+
+      <!-- Área de importação (oculta para Dra. Mone) -->
+      <div id="v2-import-area" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);margin-bottom:12px">📋 Nova Movimentação — <span id="v2-data-label"></span></div>
+
+        <!-- Upload -->
+        <div id="v2-drop-zone" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;transition:border-color .2s"
+          ondragover="event.preventDefault();document.getElementById('v2-drop-zone').style.borderColor='var(--vinho)'"
+          ondragleave="document.getElementById('v2-drop-zone').style.borderColor='var(--border)'"
+          ondrop="v2HandleDrop(event)"
+          onclick="document.getElementById('v2-file-input').click()">
+          <span style="font-size:20px">📎</span>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text)">Importar Excel ou Imagem</div>
+            <div style="font-size:11px;color:var(--text2)">Clique ou arraste o arquivo aqui</div>
+          </div>
+          <div id="v2-file-info" style="font-size:11px;color:var(--text2);margin-left:auto"></div>
+        </div>
+        <input type="file" id="v2-file-input" accept="image/*,.xls,.xlsx" style="display:none" onchange="v2HandleFile(this.files[0])">
+
+        <!-- Saldo do dia -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap">💰 Saldo do Dia:</span>
+          <input type="text" id="v2-saldo" placeholder="R$ 0,00"
+            style="max-width:180px;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-weight:600;color:#166534;font-family:var(--font-body);background:var(--surface2)">
+          <span style="font-size:10px;color:var(--text2)">extraído automaticamente · editável</span>
+        </div>
+
+        <!-- Tabela de despesas editável -->
+        <div style="margin-bottom:10px">
+          <div style="display:grid;grid-template-columns:130px 1fr 110px 80px 28px;gap:6px;padding:4px 2px;margin-bottom:4px">
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Categoria</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Descrição</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);text-align:right">Valor</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Método</span>
+            <span></span>
+          </div>
+          <div id="v2-linhas-desp"></div>
+          <button onclick="v2AddLinha()" style="font-size:11px;color:var(--vinho);background:none;border:none;cursor:pointer;font-family:var(--font-body);font-weight:700;margin-top:6px">＋ Adicionar linha</button>
+        </div>
+
+        <!-- Total das despesas -->
+        <div style="display:grid;grid-template-columns:130px 1fr 110px 80px 28px;gap:6px;padding:8px 2px 0;border-top:2px solid var(--border)">
+          <span></span>
+          <span style="font-size:11px;font-weight:700;color:var(--text2);text-align:right;padding-right:8px">TOTAL DAS DESPESAS</span>
+          <span id="v2-total-desp" style="font-size:14px;font-weight:800;color:var(--vinho);text-align:right">R$ 0,00</span>
+          <span></span><span></span>
+        </div>
+
+        <!-- Botão salvar -->
+        <div style="margin-top:14px;display:flex;gap:8px">
+          <button onclick="v2Salvar()" id="v2-btn-salvar"
+            style="flex:1;padding:10px;background:var(--vinho);color:var(--marfim);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-body)">
+            💾 Salvar Movimentação
+          </button>
+        </div>
+        <div id="v2-status" style="font-size:11px;color:var(--text2);margin-top:6px;min-height:16px"></div>
+      </div>
+
+      <!-- Cards por dia -->
+      <div id="v2-cards-wrap"></div>
+
+    </div><!-- /v2-main -->
+  </div><!-- /tab-despesas-v2 -->
 
   <!-- ===== RELACIONAMENTO / SIMULADOR DE NEGOCIAÇÃO ===== -->
   <div class="tab-content" id="tab-vendas">
@@ -7796,6 +7894,503 @@ aprovInit();
   const s=document.createElement('script');
   s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
   document.head.appendChild(s);
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+// APROVAÇÃO DE DESPESAS V2 — lógica completamente independente
+// Prefixo: v2_ / v2Data / v2Usuario
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Constantes ──
+const V2_PODE_ADICIONAR = ['Financeiro', 'Recepção', 'Outro'];
+const V2_PODE_APROVAR   = 'Dra. Mone';
+
+// ── Estado ──
+let v2Usuario   = localStorage.getItem('v2Usuario') || '';
+let v2Data_     = {}; // { 'YYYY-MM-DD': { saldo, despesas:[{cat,desc,valor,metodo}], criadoPor, criadoEm, aprovadoPor, aprovadoEm } }
+let v2MesAtivo  = '';
+let v2LinhasTemp= [];
+
+(function(){ try { v2Data_ = JSON.parse(localStorage.getItem('v2Data') || '{}'); } catch(e){ v2Data_={}; } })();
+
+// ── Persistência ──
+function v2Salvar_db(){ localStorage.setItem('v2Data', JSON.stringify(v2Data_)); }
+
+// ── Formatadores ──
+function v2Fmt(v){
+  const n = parseFloat(String(v||0).replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+  return 'R$ ' + n.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+}
+function v2ParseVal(v){
+  if(v === null || v === undefined || v === '') return 0;
+  if(typeof v === 'number') return v;
+  return parseFloat(String(v).replace(/[R$\s]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.')) || 0;
+}
+function v2FmtDate(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function v2FmtMes(ym){ const [y,m]=ym.split('-'); const n=['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return `${n[+m]} ${y}`; }
+function v2Hoje(){ return new Date().toISOString().split('T')[0]; }
+
+// ── Login / Logout ──
+function v2Entrar(nome){
+  v2Usuario = nome;
+  localStorage.setItem('v2Usuario', nome);
+  document.getElementById('v2-login-wall').style.display = 'none';
+  document.getElementById('v2-main').style.display = '';
+  v2Init();
+}
+function v2Sair(){
+  v2Usuario = '';
+  localStorage.removeItem('v2Usuario');
+  document.getElementById('v2-login-wall').style.display = '';
+  document.getElementById('v2-main').style.display = 'none';
+}
+
+// ── Init ──
+function v2Init(){
+  const tag = document.getElementById('v2-usuario-tag');
+  if(tag) tag.textContent = v2Usuario;
+
+  const eAprovador = v2Usuario === V2_PODE_APROVAR;
+  const importArea = document.getElementById('v2-import-area');
+  if(importArea) importArea.style.display = eAprovador ? 'none' : '';
+
+  // Garante mês ativo
+  const meses = v2GetMeses();
+  const keys   = Object.keys(meses).sort();
+  const hoje   = v2Hoje().slice(0,7);
+  if(!v2MesAtivo || !keys.includes(v2MesAtivo)){
+    v2MesAtivo = keys.includes(hoje) ? hoje : (keys[keys.length-1] || hoje);
+  }
+
+  // Data label
+  const dl = document.getElementById('v2-data-label');
+  if(dl) dl.textContent = v2FmtDate(v2Hoje());
+
+  // Garante linha mínima
+  if(v2LinhasTemp.length === 0) v2LinhasTemp = [v2LinhaVazia()];
+
+  v2RenderNavMeses();
+  v2RenderKpis();
+  v2RenderLinhas();
+  v2RenderCards();
+}
+
+function v2LinhaVazia(){ return {cat:'', desc:'', valor:'', metodo:''}; }
+
+// ── Meses disponíveis ──
+function v2GetMeses(){
+  const m = {};
+  Object.keys(v2Data_).sort().forEach(k => {
+    const mes = k.slice(0,7);
+    if(!m[mes]) m[mes] = [];
+    m[mes].push(k);
+  });
+  return m;
+}
+
+// ── Nav de meses ──
+function v2RenderNavMeses(){
+  const nav = document.getElementById('v2-nav-meses');
+  if(!nav) return;
+  const meses = v2GetMeses();
+  const keys  = Object.keys(meses).sort();
+  const hoje  = v2Hoje().slice(0,7);
+  if(!keys.includes(hoje)) keys.push(hoje);
+  nav.innerHTML = keys.sort().map(k => {
+    const ativo = k === v2MesAtivo;
+    return `<button onclick="v2MudarMes('${k}')"
+      style="padding:3px 12px;border-radius:16px;border:1px solid ${ativo?'var(--vinho)':'var(--border)'};background:${ativo?'var(--vinho)':'var(--surface2)'};color:${ativo?'var(--marfim)':'var(--text2)'};font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font-body)">${v2FmtMes(k)}</button>`;
+  }).join('');
+}
+function v2MudarMes(k){ v2MesAtivo = k; v2RenderCards(); v2RenderKpis(); }
+
+// ── KPIs ──
+function v2RenderKpis(){
+  const el = document.getElementById('v2-kpis');
+  if(!el) return;
+  const dados = JSON.parse(localStorage.getItem('v2Data') || '{}');
+  const diasComDesp = Object.values(dados).filter(d => (d.despesas||[]).length > 0);
+  const todasDesp   = diasComDesp.flatMap(d => d.despesas||[]);
+  const total       = todasDesp.reduce((s,i) => s + v2ParseVal(i.valor), 0);
+  const nDesp       = todasDesp.length;
+  const mediaDia    = diasComDesp.length > 0 ? total / diasComDesp.length : 0;
+  const mediaDp     = nDesp > 0 ? total / nDesp : 0;
+  let maiorDia='', maiorVal=0;
+  Object.entries(dados).forEach(([k,d]) => {
+    const v = (d.despesas||[]).reduce((s,i) => s + v2ParseVal(i.valor), 0);
+    if(v > maiorVal){ maiorVal=v; maiorDia=k; }
+  });
+  el.innerHTML = [
+    ['Nº de Despesas',          `${nDesp}`,               `em ${diasComDesp.length} dia${diasComDesp.length!==1?'s':''}`],
+    ['Valor Total',              v2Fmt(total),              ''],
+    ['Maior Movimentação',       maiorDia?v2FmtDate(maiorDia):'—', maiorDia?v2Fmt(maiorVal):''],
+    ['Média por Dia',            v2Fmt(mediaDia),           ''],
+    ['Média por Despesa',        v2Fmt(mediaDp),            'valor médio individual'],
+  ].map(([label,val,sub]) => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);margin-bottom:6px">${label}</div>
+      <div style="font-size:16px;font-weight:800;color:var(--vinho)">${val}</div>
+      ${sub?`<div style="font-size:10px;color:var(--text2);margin-top:3px">${sub}</div>`:''}
+    </div>`).join('');
+}
+
+// ── Linhas editáveis ──
+function v2RenderLinhas(){
+  const wrap = document.getElementById('v2-linhas-desp');
+  if(!wrap) return;
+  wrap.innerHTML = v2LinhasTemp.map((l,i) => `
+    <div style="display:grid;grid-template-columns:130px 1fr 110px 80px 28px;gap:6px;margin-bottom:4px;align-items:center">
+      <input value="${v2Esc(l.cat)}" placeholder="Categoria"
+        style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:var(--font-body);background:var(--surface2)"
+        oninput="v2LinhasTemp[${i}].cat=this.value">
+      <input value="${v2Esc(l.desc)}" placeholder="Descrição"
+        style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:var(--font-body);background:var(--surface2)"
+        oninput="v2LinhasTemp[${i}].desc=this.value">
+      <input value="${v2Esc(l.valor)}" placeholder="0,00" type="text"
+        style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:var(--font-body);background:var(--surface2);text-align:right"
+        oninput="v2LinhasTemp[${i}].valor=this.value;v2AtualizarTotal()">
+      <input value="${v2Esc(l.metodo)}" placeholder="Método"
+        style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:var(--font-body);background:var(--surface2)"
+        oninput="v2LinhasTemp[${i}].metodo=this.value">
+      <button onclick="v2RemLinha(${i})"
+        style="background:none;border:none;color:var(--text2);font-size:14px;cursor:pointer;padding:2px;line-height:1">×</button>
+    </div>`).join('');
+  v2AtualizarTotal();
+}
+function v2Esc(s){ return String(s||'').replace(/"/g,'&quot;'); }
+function v2AddLinha(){ v2LinhasTemp.push(v2LinhaVazia()); v2RenderLinhas(); }
+function v2RemLinha(i){ if(v2LinhasTemp.length>1){ v2LinhasTemp.splice(i,1); v2RenderLinhas(); } }
+function v2AtualizarTotal(){
+  const t = v2LinhasTemp.reduce((s,l) => s + v2ParseVal(l.valor), 0);
+  const el = document.getElementById('v2-total-desp');
+  if(el) el.textContent = v2Fmt(t);
+}
+
+// ── Salvar movimentação ──
+function v2Salvar(){
+  if(!V2_PODE_ADICIONAR.includes(v2Usuario)){
+    v2SetStatus('Sem permissão para salvar.', 'err'); return;
+  }
+  const despesas = v2LinhasTemp.filter(l => l.desc || v2ParseVal(l.valor) > 0);
+  if(despesas.length === 0){ v2SetStatus('Adicione ao menos uma despesa.', 'err'); return; }
+
+  const data  = v2Hoje();
+  const saldo = document.getElementById('v2-saldo')?.value.trim() || '';
+  v2Data_[data] = {
+    saldo, despesas, criadoPor: v2Usuario,
+    criadoEm: new Date().toISOString(),
+    aprovadoPor: null, aprovadoEm: null
+  };
+  v2Salvar_db();
+  v2LinhasTemp = [v2LinhaVazia()];
+  document.getElementById('v2-saldo').value = '';
+  v2MesAtivo = data.slice(0,7);
+  v2RenderLinhas();
+  v2RenderNavMeses();
+  v2RenderCards();
+  v2RenderKpis();
+  v2SetStatus('✅ Movimentação salva.', 'ok');
+}
+function v2SetStatus(msg, tipo){
+  const el = document.getElementById('v2-status');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.color = tipo==='err' ? 'var(--red,#c00)' : '#166534';
+  if(msg) setTimeout(()=>{ if(el.textContent===msg) el.textContent=''; }, 4000);
+}
+
+// ── Cards por dia ──
+function v2RenderCards(){
+  const wrap = document.getElementById('v2-cards-wrap');
+  if(!wrap) return;
+  const meses = v2GetMeses();
+  const dias  = (meses[v2MesAtivo] || []).sort().reverse();
+
+  if(dias.length === 0){
+    wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px">Nenhuma movimentação neste mês</div>';
+    return;
+  }
+
+  const eAprovador = v2Usuario === V2_PODE_APROVAR;
+  const podeExcluir= V2_PODE_ADICIONAR.includes(v2Usuario);
+
+  wrap.innerHTML = dias.map(dia => {
+    const d = v2Data_[dia];
+    if(!d) return '';
+    const desps    = d.despesas || [];
+    const total    = desps.reduce((s,i) => s + v2ParseVal(i.valor), 0);
+    const aprovado = !!d.aprovadoPor;
+
+    if(aprovado){
+      return `<div class="adp-day-card" style="cursor:pointer" onclick="v2ToggleCard('${dia}')" data-v2-dia="${dia}">
+        <div class="adp-day-header" style="padding:10px 16px">
+          <span class="adp-approved-tag">✅ Despesas (${v2FmtDate(dia)})</span>
+          <span style="font-size:11px;color:var(--text2)">▼ detalhes</span>
+        </div>
+      </div>`;
+    }
+
+    const grid = '1fr 110px 80px';
+    const thead = `<div style="display:grid;grid-template-columns:${grid};gap:8px;padding:6px 0;border-bottom:2px solid var(--border)">
+      <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Descrição</span>
+      <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);text-align:right">Valor</span>
+      <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Método</span>
+    </div>`;
+
+    const tbody = desps.map(dep => {
+      const catLine = dep.cat ? `<div style="font-size:10px;color:var(--text2);margin-top:1px">${dep.cat}</div>` : '';
+      return `<div style="display:grid;grid-template-columns:${grid};gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:start">
+        <div style="font-size:12px;color:var(--text);word-break:break-word;line-height:1.4">${dep.desc||'—'}${catLine}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right;white-space:nowrap">${v2Fmt(dep.valor)}</div>
+        <div style="font-size:11px;color:var(--gray);word-break:break-word">${dep.metodo||'—'}</div>
+      </div>`;
+    }).join('');
+
+    const tfoot = `<div style="display:grid;grid-template-columns:${grid};gap:8px;padding:8px 0 0;border-top:2px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">TOTAL DAS DESPESAS</div>
+      <div style="font-size:14px;font-weight:800;color:var(--vinho);text-align:right">${v2Fmt(total)}</div>
+      <div></div>
+    </div>`;
+
+    const saldoLine = d.saldo
+      ? `<div style="font-size:11px;color:#166534;font-weight:600;margin-top:4px">💰 Saldo do dia: ${v2Fmt(d.saldo)}</div>` : '';
+
+    const aprvBtn = eAprovador ? `
+      <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+        <button onclick="v2AprovarDia('${dia}')"
+          style="padding:9px 24px;background:#166534;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-body)">
+          ✅ Confirmar Aprovação
+        </button>
+      </div>` : '';
+
+    const excBtn = podeExcluir ? `<button onclick="v2ExcluirDia('${dia}')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:2px" title="Remover">🗑</button>` : '';
+
+    return `<div class="adp-day-card" id="v2-card-${dia}" data-v2-dia="${dia}" style="margin-bottom:12px">
+      <div class="adp-day-header">
+        <div>
+          <div class="adp-day-date">📅 Despesas (${v2FmtDate(dia)})</div>
+          ${saldoLine}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">${excBtn}</div>
+      </div>
+      <div class="adp-day-body">${thead}${tbody}${tfoot}</div>
+      ${aprvBtn}
+    </div>`;
+  }).join('');
+}
+
+function v2ToggleCard(dia){
+  const d = v2Data_[dia]; if(!d) return;
+  const el = document.getElementById('v2-card-'+dia)
+    || document.querySelector('[data-v2-dia="'+dia+'"]');
+  if(!el) return;
+  // Se card expandido existe: recolher
+  if(el.querySelector('.adp-day-body')){ v2RenderCards(); return; }
+  // Expandir
+  const desps = d.despesas||[];
+  const total = desps.reduce((s,i)=>s+v2ParseVal(i.valor),0);
+  const grid  = '1fr 110px 80px';
+  const rows  = desps.map(dep=>{
+    const catLine=dep.cat?`<div style="font-size:10px;color:var(--text2)">${dep.cat}</div>`:'';
+    return `<div style="display:grid;grid-template-columns:${grid};gap:8px;padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-size:12px;color:var(--text);word-break:break-word">${dep.desc||'—'}${catLine}</div><div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right">${v2Fmt(dep.valor)}</div><div style="font-size:11px;color:var(--gray)">${dep.metodo||'—'}</div></div>`;
+  }).join('');
+  const thead=`<div style="display:grid;grid-template-columns:${grid};gap:8px;padding:6px 0;border-bottom:2px solid var(--border)"><span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text2)">Descrição</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text2);text-align:right">Valor</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text2)">Método</span></div>`;
+  const tfoot=`<div style="display:grid;grid-template-columns:${grid};gap:8px;padding:8px 0 0;border-top:2px solid var(--border)"><div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">TOTAL DAS DESPESAS</div><div style="font-size:14px;font-weight:800;color:var(--vinho);text-align:right">${v2Fmt(total)}</div><div></div></div>`;
+  const saldoLine=d.saldo?`<div style="font-size:11px;color:#166534;font-weight:600;margin-top:4px">💰 Saldo: ${v2Fmt(d.saldo)}</div>`:'';
+  el.outerHTML=`<div class="adp-day-card" id="v2-card-${dia}" data-v2-dia="${dia}" style="margin-bottom:12px">
+    <div class="adp-day-header">
+      <div><div class="adp-day-date">📅 Despesas (${v2FmtDate(dia)})</div>${saldoLine}</div>
+      <span style="font-size:11px;color:var(--text2);cursor:pointer" onclick="v2RenderCards()">▲ recolher</span>
+    </div>
+    <div class="adp-day-body">${thead}${rows}${tfoot}</div>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+      <span class="adp-approved-tag">✅ Aprovado por ${d.aprovadoPor} em ${v2FmtDate(d.aprovadoEm?.split('T')[0])}</span>
+    </div>
+  </div>`;
+}
+
+// ── Aprovação ──
+function v2AprovarDia(dia){
+  if(v2Usuario !== V2_PODE_APROVAR) return;
+  const card = document.getElementById('v2-card-'+dia)
+    || document.querySelector('[data-v2-dia="'+dia+'"]');
+  if(!card) return;
+  // Remove barra existente
+  document.querySelectorAll('.v2-confirm-bar').forEach(b=>b.remove());
+  const bar = document.createElement('div');
+  bar.className = 'v2-confirm-bar';
+  bar.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:#f0fdf4;border-top:2px solid #86efac;flex-wrap:wrap';
+  bar.innerHTML=`
+    <span style="font-size:12px;color:#166534;font-weight:600">Confirmar aprovação das despesas de <strong>${v2FmtDate(dia)}</strong>?</span>
+    <div style="display:flex;gap:8px">
+      <button style="padding:8px 20px;background:#166534;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)"
+        onclick="v2ExecutarAprovacao('${dia}')">✅ Sim, aprovar</button>
+      <button style="padding:8px 14px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer;font-family:var(--font-body)"
+        onclick="this.closest('.v2-confirm-bar').remove()">Cancelar</button>
+    </div>`;
+  card.appendChild(bar);
+}
+
+function v2ExecutarAprovacao(dia){
+  if(!v2Data_[dia]) return;
+  v2Data_[dia].aprovadoPor = v2Usuario;
+  v2Data_[dia].aprovadoEm  = new Date().toISOString();
+  v2Salvar_db();
+  v2RenderCards();
+  v2RenderKpis();
+}
+
+function v2ExcluirDia(dia){
+  if(!V2_PODE_ADICIONAR.includes(v2Usuario)) return;
+  if(!confirm(`Remover movimentação de ${v2FmtDate(dia)}?`)) return;
+  delete v2Data_[dia];
+  v2Salvar_db();
+  v2RenderNavMeses();
+  v2RenderCards();
+  v2RenderKpis();
+}
+
+// ── Upload ──
+function v2HandleDrop(e){
+  e.preventDefault();
+  document.getElementById('v2-drop-zone').style.borderColor='var(--border)';
+  const f = e.dataTransfer.files[0];
+  if(f) v2HandleFile(f);
+}
+
+function v2HandleFile(file){
+  if(!file) return;
+  const info = document.getElementById('v2-file-info');
+  if(info) info.textContent = `📎 ${file.name}`;
+
+  if(file.name.match(/\.xlsx?$/i)){
+    const tentarLer = () => {
+      if(!window.XLSX){ setTimeout(tentarLer, 400); return; }
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const wb   = XLSX.read(e.target.result, {type:'array', raw:false});
+          const ws   = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+          v2ExtrairExcel(rows);
+        } catch(err){ v2SetStatus('Erro ao ler planilha.', 'err'); }
+      };
+      reader.readAsArrayBuffer(file);
+    };
+    tentarLer();
+  }
+}
+
+// ── Extração Excel — lógica nova, por conteúdo ──
+function v2ExtrairExcel(rows){
+  if(!rows || rows.length < 2){ v2SetStatus('Planilha vazia.', 'err'); return; }
+
+  const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const isSaldo = s => /saldo\s*(hoje|do\s*dia|atual)?(\s*:)?/i.test(String(s||''));
+  const isTotal = s => /^total\b/i.test(String(s||'').trim());
+
+  // 1. Encontrar linha de cabeçalho (primeira com ≥ 3 células preenchidas)
+  let hRow = -1;
+  for(let i=0; i<Math.min(15, rows.length); i++){
+    if((rows[i]||[]).filter(c=>String(c||'').trim()!=='').length >= 3){ hRow=i; break; }
+  }
+  if(hRow < 0){ v2SetStatus('Cabeçalho não encontrado.', 'err'); return; }
+
+  const rawH = (rows[hRow]||[]).map(c=>String(c||'').trim());
+  const h    = rawH.map(norm);
+
+  // 2. Detectar colunas pelo conteúdo do cabeçalho
+  const findIdx = (pats) => h.findIndex(c => pats.some(p => p.test(c)));
+  const iCat  = findIdx([/despesa|categ|tipo/]);
+  const iDesc = findIdx([/descri|histor|memo/]);
+  const iVal  = findIdx([/cadastrado|valor|r\$|vl\b|debito|montante/]);
+  const iMet  = findIdx([/metodo|forma|pagamento|pagto/]);
+
+  // Fallback posicional se nenhuma coluna foi detectada
+  const CI = iCat  >= 0 ? iCat  : 0;
+  const CD = iDesc >= 0 ? iDesc : 1;
+  const CV = iVal  >= 0 ? iVal  : 3;
+  const CM = iMet  >= 0 ? iMet  : 4;
+
+  const novas = [];
+  let saldoAchado = null;
+
+  for(let i = hRow+1; i < rows.length; i++){
+    const row   = rows[i] || [];
+    const cells = row.map(c => String(c===null||c===undefined?'':c).trim());
+    if(cells.every(c=>!c)) continue;
+
+    const col0 = cells[0] || '';
+    const col1 = cells[1] || '';
+
+    // Linha de saldo — extrai valor e descarta
+    if(isSaldo(col0) || isSaldo(col1)){
+      const txt = isSaldo(col0) ? col0 : col1;
+      // Tenta pegar valor da mesma célula (ex: "SALDO HOJE: R$100.000,00")
+      let m = txt.match(/R\$\s*([\d.,]+)/i);
+      if(!m){
+        // Tenta pegar de outra coluna numérica da mesma linha
+        for(let ci=0; ci<cells.length; ci++){
+          const n = v2ParseVal(cells[ci]);
+          if(n > 0){ m = [null, cells[ci]]; break; }
+        }
+      }
+      if(m && !saldoAchado) saldoAchado = cells[CV] || m[1];
+      continue;
+    }
+
+    // Linha de total — descarta
+    if(isTotal(col0) || isTotal(col1)) continue;
+
+    // Linha de cabeçalho repetido — descarta
+    const nCol0 = norm(col0);
+    if(nCol0 === norm(rawH[CI]) || nCol0 === norm(rawH[CD])) continue;
+
+    const cat   = cells[CI]  || '';
+    const desc  = v2BrevDesc(cells[CD] || '');
+    const valor = cells[CV]  || '';
+    const metodo= cells[CM]  || '';
+
+    if(!cat && !desc && !v2ParseVal(valor)) continue;
+
+    novas.push({ cat, desc, valor, metodo });
+  }
+
+  if(novas.length === 0){ v2SetStatus(`Nenhuma despesa encontrada. (colunas: ${rawH.join(', ')})`, 'err'); return; }
+
+  // Preenche saldo
+  if(saldoAchado){
+    const sEl = document.getElementById('v2-saldo');
+    if(sEl) sEl.value = saldoAchado;
+  }
+
+  v2LinhasTemp = novas;
+  v2RenderLinhas();
+  v2SetStatus(`${novas.length} despesa${novas.length!==1?'s':''} importada${novas.length!==1?'s':''}.`, 'ok');
+}
+
+function v2BrevDesc(s){
+  if(!s) return '';
+  return s.replace(/\s*[-–]\s*Parcela\s+\d+\/\d+\s*$/i,'').replace(/\.\s*$/,'').trim();
+}
+
+// Inicializa V2 se sessão já existe
+(function(){
+  if(v2Usuario){
+    const lw = document.getElementById('v2-login-wall');
+    const mn = document.getElementById('v2-main');
+    if(lw) lw.style.display = 'none';
+    if(mn) mn.style.display = '';
+  }
+})();
+
+// Hook switchTab para inicializar ao entrar na aba
+(function(){
+  const _p = window.switchTab;
+  window.switchTab = function(name){
+    _p(name);
+    if(name==='despesas-v2' && v2Usuario) v2Init();
+  };
 })();
 
 // Close on overlay click
