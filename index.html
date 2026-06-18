@@ -1370,7 +1370,7 @@
       <div id="adp-form-wrap">
         <div class="adp-form-panel">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-            <div style="font-size:13px;font-weight:800;color:var(--text)">📋 Nova Movimentação</div>
+            <div id="adp-form-title" style="font-size:13px;font-weight:800;color:var(--text)">📋 Despesas</div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <div id="adp-perm-msg" style="display:none;font-size:11px;color:var(--text2);background:rgba(139,45,66,.07);border-radius:7px;padding:5px 12px">
                 🔒 Somente <strong>Dra. Mone</strong> ou <strong>Financeiro</strong> podem adicionar
@@ -1379,14 +1379,13 @@
             </div>
           </div>
 
-          <div class="adp-form-grid" id="adp-fields-wrap">
+          <!-- data oculta — preenchida automaticamente com hoje -->
+          <input type="hidden" id="adp-data">
+
+          <div id="adp-fields-wrap" style="margin-bottom:12px">
             <div>
-              <div class="adp-form-label">Data</div>
-              <input type="date" id="adp-data" class="adp-form-input">
-            </div>
-            <div>
-              <div class="adp-form-label">Saldo Bancário do Dia (R$)</div>
-              <input type="text" id="adp-saldo" class="adp-form-input" placeholder="Ex: 12.450,00">
+              <div class="adp-form-label">Saldo Bancário do Dia (R$) <span style="font-weight:400;text-transform:none;font-size:10px">— extraído automaticamente · editável</span></div>
+              <input type="text" id="adp-saldo" class="adp-form-input" placeholder="Ex: 12.450,00" style="max-width:240px">
             </div>
           </div>
 
@@ -1412,6 +1411,13 @@
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
               <div class="adp-form-label" style="margin-bottom:0">Despesas</div>
               <button onclick="adpAdicionarLinhaDespesa()" style="font-size:11px;color:var(--vinho);background:none;border:none;cursor:pointer;font-family:var(--font-body);font-weight:700">＋ Adicionar linha</button>
+            </div>
+            <div style="display:grid;grid-template-columns:140px 1fr 100px 140px 28px;gap:6px;padding:0 2px;margin-bottom:4px">
+              <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Categoria</span>
+              <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Descrição</span>
+              <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Valor</span>
+              <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Método</span>
+              <span></span>
             </div>
             <div class="adp-despesas-list" id="adp-despesas-list"></div>
           </div>
@@ -6760,6 +6766,15 @@ function adpRender(){
   // garante data preenchida no form
   const dataEl = document.getElementById('adp-data');
   if(dataEl && !dataEl.value) dataEl.value = new Date().toISOString().split('T')[0];
+  // título dinâmico com a data
+  const titleEl = document.getElementById('adp-form-title');
+  if(titleEl){
+    const hoje = new Date();
+    const dd = String(hoje.getDate()).padStart(2,'0');
+    const mm = String(hoje.getMonth()+1).padStart(2,'0');
+    const yyyy = hoje.getFullYear();
+    titleEl.textContent = `📋 Despesas (${dd}/${mm}/${yyyy})`;
+  }
   // garante ao menos uma linha de despesa
   if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',cat:'',metodo:'',dt:'',valor:''}]; adpRenderLinhasDespesa(); }
   // atualiza indicador de chave Gemini
@@ -6935,18 +6950,18 @@ function adpRenderLinhasDespesa(){
   const list = document.getElementById('adp-despesas-list');
   if(!list) return;
   list.innerHTML = adpDespesasTemp.map((d,i) => `
-    <div class="adp-despesa-item" style="display:grid;grid-template-columns:1fr 1fr 1fr 90px 28px;gap:6px;align-items:center">
-      <input type="text" class="adp-form-input" placeholder="Descrição" value="${(d.desc||'').replace(/"/g,'&quot;')}"
-        oninput="adpDespesasTemp[${i}].desc=this.value"
-        onkeydown="if(event.key==='Enter'){event.preventDefault();adpAdicionarLinhaDespesa();}">
+    <div class="adp-despesa-item" style="display:grid;grid-template-columns:140px 1fr 100px 140px 28px;gap:6px;align-items:center">
       <input type="text" class="adp-form-input" placeholder="Categoria" value="${(d.cat||'').replace(/"/g,'&quot;')}"
         oninput="adpDespesasTemp[${i}].cat=this.value"
         onkeydown="if(event.key==='Enter'){event.preventDefault();adpAdicionarLinhaDespesa();}">
-      <input type="text" class="adp-form-input" placeholder="Método pagamento" value="${(d.metodo||'').replace(/"/g,'&quot;')}"
-        oninput="adpDespesasTemp[${i}].metodo=this.value"
+      <input type="text" class="adp-form-input" placeholder="Breve descrição" value="${(d.desc||'').replace(/"/g,'&quot;')}"
+        oninput="adpDespesasTemp[${i}].desc=this.value"
         onkeydown="if(event.key==='Enter'){event.preventDefault();adpAdicionarLinhaDespesa();}">
       <input type="text" class="adp-form-input" placeholder="R$ 0,00" value="${(d.valor||'').replace(/"/g,'&quot;')}"
         oninput="adpDespesasTemp[${i}].valor=this.value"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();adpAdicionarLinhaDespesa();}">
+      <input type="text" class="adp-form-input" placeholder="Método pgto" value="${(d.metodo||'').replace(/"/g,'&quot;')}"
+        oninput="adpDespesasTemp[${i}].metodo=this.value"
         onkeydown="if(event.key==='Enter'){event.preventDefault();adpAdicionarLinhaDespesa();}">
       <button onclick="adpRemoverLinhaDespesa(${i})" style="padding:4px 8px;font-size:14px;background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text2)">×</button>
     </div>`).join('');
@@ -7097,25 +7112,40 @@ function adpFindCol(header, patterns){
   return header.findIndex(h => patterns.some(p => p.test(h)));
 }
 
+function adpBreviarDesc(desc){
+  if(!desc) return '';
+  // Remove sufixos após " - Ref " ou " – Ref " (longa explicação)
+  let s = desc.replace(/\s*[-–]\s*Ref\s+.*/i, '').trim();
+  // Remove " - Parcela X/Y" e similares
+  s = s.replace(/\s*[-–]\s*Parcela\s+\d+\/\d+.*/i, '').trim();
+  // Remove texto redundante entre parênteses no fim
+  s = s.replace(/\s*\([^)]{30,}\)\s*$/, '').trim();
+  // Limita a 60 chars e adiciona reticências se necessário
+  if(s.length > 60) s = s.slice(0, 57) + '…';
+  return s;
+}
+
 function adpExtrairDespesasExcel(rows){
   if(!rows || rows.length < 2){ adpSetStatus('Planilha vazia ou sem dados.', false); return; }
 
   // Localiza linha de cabeçalho (primeira linha não-vazia)
   let headerRow = -1;
-  for(let i = 0; i < Math.min(5, rows.length); i++){
+  for(let i = 0; i < Math.min(8, rows.length); i++){
     if(rows[i] && rows[i].some(c => c && String(c).trim())) { headerRow = i; break; }
   }
   if(headerRow < 0){ adpSetStatus('Não foi possível encontrar o cabeçalho.', false); return; }
 
-  const header = rows[headerRow].map(c => String(c||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim());
+  const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const header = rows[headerRow].map(norm);
 
-  // Mapeia colunas conhecidas do arquivo
-  const catIdx    = adpFindCol(header, [/categ/,/tipo/]);
-  const descIdx   = adpFindCol(header, [/desc/,/historico/,/hist/,/nome/,/lancamento/,/lanc/,/pagamento/,/benefici/,/fornec/]);
-  const dtIdx     = adpFindCol(header, [/venc/,/data/,/dt/]);
-  const valIdx    = adpFindCol(header, [/valor/,/vl\b/,/debito/,/deb\b/,/saida/,/pagto/,/amount/]);
-  const metIdx    = adpFindCol(header, [/metodo/,/met\b/,/forma/,/pagamento/,/tipo.*pag/,/pag.*tipo/]);
-  const saldoIdx  = adpFindCol(header, [/saldo/]);
+  // Mapeia colunas pelo cabeçalho normalizado
+  const catIdx   = adpFindCol(header, [/categ/]);
+  const descIdx  = adpFindCol(header, [/descri/,/historico/,/hist\b/,/nome/,/lancamento/,/benefici/,/fornec/]);
+  const dtIdx    = adpFindCol(header, [/venc/,/data/,/dt\b/]);
+  // "Valor de cada despesa" — prioriza "despesa" antes de "valor" genérico
+  const valIdx   = adpFindCol(header, [/valor.*desp/,/desp.*valor/,/valor\b/,/vl\b/,/debito/,/saida/,/amount/]);
+  const metIdx   = adpFindCol(header, [/metodo/,/forma.*pag/,/pag.*forma/,/metodo.*pag/]);
+  const saldoIdx = adpFindCol(header, [/saldo/]);
 
   const novas = [];
   let saldoEncontrado = null;
@@ -7124,41 +7154,45 @@ function adpExtrairDespesasExcel(rows){
     const row = rows[i];
     if(!row || row.every(c => !String(c||'').trim())) continue;
 
-    const cat    = catIdx   >= 0 ? String(row[catIdx]  ||'').trim() : '';
-    const desc   = descIdx  >= 0 ? String(row[descIdx] ||'').trim() : String(row[0]||'').trim();
-    const dt     = dtIdx    >= 0 ? String(row[dtIdx]   ||'').trim() : '';
-    const valor  = valIdx   >= 0 ? adpNormValor(row[valIdx]) : adpNormValor(row[1]);
-    const metodo = metIdx   >= 0 ? String(row[metIdx]  ||'').trim() : '';
-    const saldo  = saldoIdx >= 0 ? adpNormValor(row[saldoIdx]) : '';
+    const rawDesc = descIdx >= 0 ? String(row[descIdx]||'').trim() : String(row[0]||'').trim();
+    const cat     = catIdx  >= 0 ? String(row[catIdx] ||'').trim() : '';
+    const dt      = dtIdx   >= 0 ? String(row[dtIdx]  ||'').trim() : '';
+    const valor   = valIdx  >= 0 ? adpNormValor(row[valIdx]) : '';
+    const metodo  = metIdx  >= 0 ? String(row[metIdx] ||'').trim() : '';
+    const saldoRaw= saldoIdx>= 0 ? String(row[saldoIdx]||'').trim() : '';
 
-    // Pega o primeiro saldo encontrado (representa o saldo do dia)
-    if(saldo && !saldoEncontrado) saldoEncontrado = saldo;
+    // Captura saldo do dia (primeiro valor não-vazio encontrado)
+    if(saldoRaw && !saldoEncontrado){
+      const sv = adpNormValor(saldoRaw);
+      if(sv) saldoEncontrado = sv;
+    }
 
-    // Ignora linhas sem descrição ou valor
+    // Pula linhas sem descrição e sem valor (linhas de saldo puro, totais, etc.)
+    if(!rawDesc && !valor) continue;
+    // Pula linhas cujo conteúdo principal é sobre saldo (não é uma despesa)
+    if(!rawDesc && saldoRaw) continue;
+    if(rawDesc.match(/^(saldo|total|subtotal|descri|categ|metodo|data|venc)/i)) continue;
+
+    const desc = adpBreviarDesc(rawDesc);
     if(!desc && !valor) continue;
-    if(desc.match(/^(descri|histor|nome|item|lanc|categ|metodo|forma|saldo|data|venc)/i)) continue;
 
     novas.push({ cat, desc, dt, valor, metodo });
   }
 
   if(novas.length === 0){
-    // Debug: mostra os cabeçalhos encontrados para diagnóstico
-    adpSetStatus(`Nenhuma despesa encontrada. Colunas detectadas: [${header.join(' | ')}]`, false);
+    adpSetStatus(`Nenhuma despesa encontrada. Colunas: [${header.join(' | ')}]`, false);
     return;
   }
 
-  // Salva automaticamente ao importar (sem precisar clicar Salvar)
+  // Preenche saldo automaticamente (sobrescreve se já havia)
+  const saldoEl = document.getElementById('adp-saldo');
+  if(saldoEl && saldoEncontrado) saldoEl.value = saldoEncontrado;
+
   const dataForm = document.getElementById('adp-data').value || new Date().toISOString().split('T')[0];
   adpDespesasTemp = novas;
   adpRenderLinhasDespesa();
 
-  // Preenche saldo se encontrado
-  const saldoEl = document.getElementById('adp-saldo');
-  if(saldoEl && saldoEncontrado && !saldoEl.value) saldoEl.value = saldoEncontrado;
-
-  adpSetStatus(`✅ ${novas.length} despesa${novas.length!==1?'s':''} importada${novas.length!==1?'s':''}  —  salvando automaticamente...`, false);
-
-  // Salva imediatamente
+  adpSetStatus(`✅ ${novas.length} despesa${novas.length!==1?'s':''} importada${novas.length!==1?'s':''}  —  salvando...`, false);
   setTimeout(() => adpSalvarMovimentacaoAuto(dataForm, saldoEncontrado, novas), 300);
 }
 
