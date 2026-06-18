@@ -1306,20 +1306,37 @@
       <div class="section-title">Aprovações <span>Registros para modificação em sistema</span></div>
     </div>
 
-    <!-- Linha: usuário + finalizar (compartilhada entre Entradas/Trocas de Moeda) -->
+    <!-- Login wall -->
+    <div id="aprov-login-wall" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:16px">
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--vinho);letter-spacing:.15em">Aprovações</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Selecione seu perfil para continuar</div>
+      <div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:280px">
+        <button onclick="aprovEntrar('Dra. Mone')" style="padding:11px;background:var(--vinho);color:var(--marfim);border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-body);letter-spacing:.04em">Dra. Mone</button>
+        <button onclick="aprovEntrar('Financeiro')" style="padding:11px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body)">Financeiro</button>
+        <button onclick="aprovEntrar('Recepção')" style="padding:11px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body)">Recepção</button>
+        <button onclick="aprovEntrar('Outro')" style="padding:11px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body)">Outro</button>
+      </div>
+    </div>
+
+    <!-- Conteúdo pós-login -->
+    <div id="aprov-main-content" style="display:none">
+
+    <!-- Barra de usuário logado -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-      <span style="font-size:11px;color:var(--text2);font-weight:600">Usuário ativo:</span>
-      <select id="aprov-usuario" onchange="aprovSetUsuario()" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:600;font-family:var(--font-body);color:var(--text);cursor:pointer;outline:none">
-        <option value="">— selecione —</option>
-        <option value="Dra. Mone">Dra. Mone</option>
-        <option value="Recepção">Recepção</option>
-        <option value="Financeiro">Financeiro</option>
-        <option value="Outro">Outro</option>
-      </select>
-      <span id="aprov-usuario-tag" style="display:none;font-size:11px;background:var(--vinho);color:var(--marfim);border-radius:10px;padding:2px 10px;font-weight:600"></span>
+      <span style="font-size:11px;color:var(--text2)">Logado como:</span>
+      <span id="aprov-usuario-tag" style="font-size:11px;background:var(--vinho);color:var(--marfim);border-radius:10px;padding:3px 12px;font-weight:700"></span>
+      <button onclick="aprovSair()" style="font-size:11px;color:var(--text2);background:none;border:1px solid var(--border);border-radius:7px;padding:3px 10px;cursor:pointer;font-family:var(--font-body)">Sair</button>
       <div style="flex:1"></div>
       <button id="aprov-btn-finalizar" onclick="aprovFinalizar()" style="padding:6px 16px;background:var(--vinho);color:var(--marfim);border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font-body);display:none">🔒 Finalizar Período</button>
     </div>
+    <!-- hidden select mantido para compatibilidade interna -->
+    <select id="aprov-usuario" style="display:none">
+      <option value="">— selecione —</option>
+      <option value="Dra. Mone">Dra. Mone</option>
+      <option value="Recepção">Recepção</option>
+      <option value="Financeiro">Financeiro</option>
+      <option value="Outro">Outro</option>
+    </select>
 
     <!-- Sub-abas principais -->
     <div style="display:flex;gap:6px;margin-bottom:0;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap">
@@ -1432,7 +1449,8 @@
       <!-- Cards por dia -->
       <div id="adp-cards-wrap"></div>
 
-    </div>
+    </div><!-- /adp-subtab-despesas-panel -->
+    </div><!-- /aprov-main-content -->
 
     <!-- Notificação flutuante -->
     <div id="adp-notif" class="adp-notif-banner" style="display:none">
@@ -6350,10 +6368,28 @@ function aprovMudarMes(key){
   aprovRender();
 }
 
-// ── Usuário ───────────────────────────────────────────────────────────────────
+// ── Usuário / Login ───────────────────────────────────────────────────────────
+function aprovEntrar(nome){
+  aprovUsuario = nome;
+  localStorage.setItem('aprovUsuario', aprovUsuario);
+  document.getElementById('aprov-login-wall').style.display = 'none';
+  document.getElementById('aprov-main-content').style.display = '';
+  const sel = document.getElementById('aprov-usuario');
+  if(sel) sel.value = nome;
+  aprovRender();
+  adpRender();
+}
+
+function aprovSair(){
+  aprovUsuario = '';
+  localStorage.removeItem('aprovUsuario');
+  document.getElementById('aprov-login-wall').style.display = '';
+  document.getElementById('aprov-main-content').style.display = 'none';
+}
+
 function aprovSetUsuario(){
   const sel = document.getElementById('aprov-usuario');
-  aprovUsuario = sel.value;
+  aprovUsuario = sel ? sel.value : '';
   localStorage.setItem('aprovUsuario', aprovUsuario);
   aprovRender();
 }
@@ -6368,16 +6404,27 @@ function aprovFmtValor(v){ return v > 0 ? `R$ ${v.toFixed(2).replace('.',',')}` 
 
 // ── Render principal ──────────────────────────────────────────────────────────
 function aprovRender(){
+  // Controla login wall
+  const loginWall = document.getElementById('aprov-login-wall');
+  const mainContent = document.getElementById('aprov-main-content');
+  if(aprovUsuario){
+    if(loginWall) loginWall.style.display = 'none';
+    if(mainContent) mainContent.style.display = '';
+  } else {
+    if(loginWall) loginWall.style.display = '';
+    if(mainContent) mainContent.style.display = 'none';
+    return;
+  }
+
   aprovRenderNavMeses();
   aprovRenderRecados();
   aprovRenderSubAbas();
   aprovRenderBoard();
-  // restaura select usuário
   const sel = document.getElementById('aprov-usuario');
   if(sel && aprovUsuario) sel.value = aprovUsuario;
   const tag = document.getElementById('aprov-usuario-tag');
   const banner = document.getElementById('aprov-lock-banner');
-  if(tag){ tag.style.display = aprovUsuario?'inline-block':'none'; tag.textContent = aprovUsuario; }
+  if(tag){ tag.textContent = aprovUsuario; }
   if(banner){ banner.style.display = (aprovUsuario && aprovUsuario!=='Dra. Mone') ? 'flex' : 'none'; }
   // botão finalizar
   const btnFin = document.getElementById('aprov-btn-finalizar');
@@ -6691,6 +6738,11 @@ function aprovInit(){
   aprovInicializarMeses();
   const sel = document.getElementById('aprov-usuario');
   if(sel && aprovUsuario) sel.value = aprovUsuario;
+  // Se já há sessão salva, entra direto; senão mostra login wall
+  if(aprovUsuario){
+    document.getElementById('aprov-login-wall').style.display = 'none';
+    document.getElementById('aprov-main-content').style.display = '';
+  }
   aprovRender();
 }
 
@@ -7485,4 +7537,3 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
 </script>
 </body>
 </html>
-<!-- cache-bust-1781800052 -->
