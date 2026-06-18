@@ -1399,14 +1399,6 @@
           <!-- data oculta — preenchida automaticamente com hoje -->
           <input type="hidden" id="adp-data">
 
-          <div id="adp-fields-wrap" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:8px">
-              <div class="adp-form-label" style="margin-bottom:0;white-space:nowrap">Saldo do dia:</div>
-              <input type="text" id="adp-saldo" class="adp-form-input" placeholder="R$ 0,00" style="max-width:160px">
-            </div>
-            <span style="font-size:10px;color:var(--text2)">extraído automaticamente · editável</span>
-          </div>
-
           <!-- Upload — compacto -->
           <div style="display:flex;align-items:center;gap:10px;margin-top:4px;margin-bottom:4px;flex-wrap:wrap"
             ondragover="event.preventDefault();document.getElementById('adp-drop-zone').classList.add('drag')"
@@ -1424,9 +1416,16 @@
           <img id="adp-img-preview" class="adp-img-preview">
           <div id="adp-file-info" style="font-size:11px;color:var(--text2);margin-top:4px"></div>
 
+          <!-- Saldo do dia — posicionado antes da lista -->
+          <div id="adp-fields-wrap" style="margin-bottom:10px;padding:10px 0 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div class="adp-form-label" style="margin-bottom:0;white-space:nowrap">💰 Saldo do dia:</div>
+            <input type="text" id="adp-saldo" class="adp-form-input" placeholder="R$ 0,00" style="max-width:180px">
+            <span style="font-size:10px;color:var(--text2)">extraído automaticamente · editável</span>
+          </div>
+
           <!-- Lista de despesas -->
-          <div style="margin-top:14px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="margin-top:4px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
               <div class="adp-form-label" style="margin-bottom:0">Despesas</div>
               <button onclick="adpAdicionarLinhaDespesa()" style="font-size:11px;color:var(--vinho);background:none;border:none;cursor:pointer;font-family:var(--font-body);font-weight:700">＋ Adicionar linha</button>
             </div>
@@ -6913,79 +6912,74 @@ function adpRenderCards(){
   const meses = adpMeses();
   const dias = (meses[adpMesAtivo]?.dias || []).sort().reverse();
 
-  if(dias.length === 0){
-    wrap.innerHTML = '';
-    return;
-  }
+  if(dias.length === 0){ wrap.innerHTML = ''; return; }
+
+  const podeAprovar = aprovUsuario === ADP_USUARIO_APROV;
+  const podeExcluir = ADP_USUARIOS_ADD.includes(aprovUsuario);
 
   wrap.innerHTML = dias.map(dia => {
     const d = adpData[dia];
     const despesas = d.despesas || [];
     const totalDia = despesas.reduce((s,i) => s + adpParseValor(i.valor), 0);
     const aprovado = !!d.aprovadoPor;
-    const podeExcluir = ADP_USUARIOS_ADD.includes(aprovUsuario);
 
-    // Card colapsado (aprovado): só mostra título clicável
+    // ── Card aprovado: colapsado, só título ──
     if(aprovado){
       return `
       <div class="adp-day-card" style="cursor:pointer" onclick="adpToggleCard('${dia}')">
         <div class="adp-day-header" style="padding:10px 16px">
           <div style="display:flex;align-items:center;gap:10px">
-            <span class="adp-approved-tag">✅</span>
-            <div class="adp-day-date">Despesas (${adpFmtData(dia)})</div>
-            <span style="font-size:11px;color:var(--text2)">${despesas.length} despesa${despesas.length!==1?'s':''} · ${adpFmtValor(totalDia)}</span>
+            <span class="adp-approved-tag">✅ Despesas (${adpFmtData(dia)})</span>
           </div>
-          <span style="font-size:11px;color:var(--text2);cursor:pointer">▼ ver detalhes</span>
+          <span style="font-size:11px;color:var(--text2)">▼ detalhes</span>
         </div>
       </div>`;
     }
 
-    // Cabeçalho das colunas
+    // ── Grid de colunas ──
+    const cols = '140px 1fr 120px 110px';
+
     const colHeader = `
-      <div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:2px">
+      <div style="display:grid;grid-template-columns:${cols};gap:8px;padding:6px 0 6px;border-bottom:2px solid var(--border);margin-bottom:0">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Categoria</span>
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Descrição</span>
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);text-align:right">Valor</span>
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Método</span>
       </div>`;
 
-    const despHtml = despesas.map((dep,idx) => {
-      const cat   = dep.cat   ? `<span style="font-size:11px;font-weight:700;color:var(--text)">${dep.cat}</span>` : '<span style="color:var(--text2)">—</span>';
-      const dt    = dep.dt    ? ` <span style="font-size:10px;color:var(--text2)">(venc. ${dep.dt})</span>` : '';
+    const despHtml = despesas.map(dep => {
+      const dtLine = dep.dt ? `<div style="font-size:10px;color:var(--text2);margin-top:2px">Venc. ${dep.dt}</div>` : '';
       return `
-      <div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
-        <div>${cat}</div>
-        <div style="font-size:12px;color:var(--text)">${dep.desc||'—'}${dt}</div>
-        <div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right">${adpFmtValor(adpParseValor(dep.valor))}</div>
+      <div style="display:grid;grid-template-columns:${cols};gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:start">
+        <div style="font-size:11px;font-weight:700;color:var(--text)">${dep.cat||'—'}</div>
+        <div style="font-size:12px;color:var(--text);word-break:break-word;white-space:normal;line-height:1.4">${dep.desc||'—'}${dtLine}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right;white-space:nowrap">${adpFmtValor(adpParseValor(dep.valor))}</div>
         <div style="font-size:11px;color:var(--gray)">${dep.metodo||'—'}</div>
       </div>`;
     }).join('');
 
-    // Linha total
+    // Linha de total
     const totalRow = `
-      <div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:8px 0 2px">
+      <div style="display:grid;grid-template-columns:${cols};gap:8px;padding:8px 0 0;border-top:2px solid var(--border);margin-top:2px">
         <div></div>
-        <div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">Total</div>
-        <div style="font-size:13px;font-weight:800;color:var(--vinho);text-align:right">${adpFmtValor(totalDia)}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">Total das despesas</div>
+        <div style="font-size:14px;font-weight:800;color:var(--vinho);text-align:right">${adpFmtValor(totalDia)}</div>
         <div></div>
       </div>`;
 
     const imgHtml = d.arquivo && d.arquivo.tipo && d.arquivo.tipo.startsWith('image/') && d.arquivo.base64
       ? `<div style="margin-top:10px"><img src="${d.arquivo.base64}" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border);object-fit:contain" alt="Comprovante"></div>`
-      : d.arquivo && d.arquivo.nome
-        ? `<div style="margin-top:8px;font-size:11px;color:var(--text2)">📎 ${d.arquivo.nome}</div>`
-        : '';
+      : d.arquivo && d.arquivo.nome ? `<div style="margin-top:8px;font-size:11px;color:var(--text2)">📎 ${d.arquivo.nome}</div>` : '';
 
     return `
     <div class="adp-day-card" id="adp-card-${dia}">
       <div class="adp-day-header">
         <div>
           <div class="adp-day-date">📅 Despesas (${adpFmtData(dia)})</div>
-          ${d.saldo?`<div style="font-size:11px;color:#166534;margin-top:3px;font-weight:600">Saldo do dia: ${adpFmtValor(adpParseValor(d.saldo))}</div>`:''}
+          ${d.saldo ? `<div style="font-size:11px;color:#166534;margin-top:4px;font-weight:600">💰 Saldo do dia: ${adpFmtValor(adpParseValor(d.saldo))}</div>` : ''}
         </div>
-        <div class="adp-day-meta">
-          <span class="adp-day-badge" style="background:rgba(139,45,66,.1);color:var(--vinho)">${despesas.length} despesa${despesas.length!==1?'s':''}</span>
-          ${podeExcluir?`<button onclick="adpExcluirDia('${dia}')" style="background:none;border:none;color:var(--text2);font-size:12px;cursor:pointer;padding:0" title="Remover">🗑</button>`:''}
+        <div style="display:flex;align-items:center;gap:8px">
+          ${podeExcluir ? `<button onclick="adpExcluirDia('${dia}')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:2px" title="Remover dia">🗑</button>` : ''}
         </div>
       </div>
       <div class="adp-day-body">
@@ -6994,28 +6988,38 @@ function adpRenderCards(){
         ${totalRow}
         ${imgHtml}
       </div>
-      <div class="adp-status-bar">
-        <span class="adp-pending-tag">⏳ Aguardando aprovação</span>
-        <button onclick="adpAprovarDia('${dia}')" style="margin-left:auto;padding:7px 18px;background:#166534;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);display:${aprovUsuario===ADP_USUARIO_APROV?'':'none'}">✅ Confirmar Aprovação</button>
-      </div>
+      ${podeAprovar ? `
+      <div class="adp-status-bar" style="justify-content:flex-end">
+        <button onclick="adpAprovarDia('${dia}')" style="padding:8px 22px;background:#166534;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">✅ Confirmar Aprovação</button>
+      </div>` : ''}
     </div>`;
   }).join('');
 }
 
 function adpToggleCard(dia){
-  // Expande card aprovado para ver detalhes — re-renderiza sem colapso
-  // Para simplificar, apenas re-renderiza mostrando os dados do dia
-  const wrap = document.getElementById('adp-cards-wrap');
   const d = adpData[dia];
   if(!d) return;
   const despesas = d.despesas||[];
   const totalDia = despesas.reduce((s,i)=>s+adpParseValor(i.valor),0);
-  const el = document.getElementById(`adp-card-${dia}`) || wrap.querySelector(`[onclick*="${dia}"]`)?.closest('.adp-day-card');
-  // Substitui por versão expandida temporariamente
-  const colHeader = `<div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:2px"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Categoria</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Descrição</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);text-align:right">Valor</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Método</span></div>`;
-  const rows = despesas.map(dep=>`<div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><div style="font-size:11px;font-weight:700;color:var(--text)">${dep.cat||'—'}</div><div style="font-size:12px;color:var(--text)">${dep.desc||'—'}${dep.dt?` <span style="font-size:10px;color:var(--text2)">(venc. ${dep.dt})</span>`:''}</div><div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right">${adpFmtValor(adpParseValor(dep.valor))}</div><div style="font-size:11px;color:var(--gray)">${dep.metodo||'—'}</div></div>`).join('');
-  const totalRow = `<div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:8px 0 2px"><div></div><div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">Total</div><div style="font-size:13px;font-weight:800;color:var(--vinho);text-align:right">${adpFmtValor(totalDia)}</div><div></div></div>`;
-  if(el) el.outerHTML = `<div class="adp-day-card" id="adp-card-${dia}"><div class="adp-day-header"><div><div class="adp-day-date">📅 Despesas (${adpFmtData(dia)})</div>${d.saldo?`<div style="font-size:11px;color:#166534;margin-top:3px;font-weight:600">Saldo: ${adpFmtValor(adpParseValor(d.saldo))}</div>`:''}</div><span style="font-size:11px;color:var(--text2);cursor:pointer" onclick="adpRenderCards()">▲ recolher</span></div><div class="adp-day-body">${colHeader}${rows}${totalRow}</div><div class="adp-status-bar"><span class="adp-approved-tag">✅ Aprovado por ${d.aprovadoPor} em ${adpFmtData(d.aprovadoEm?.split('T')[0])}</span></div></div>`;
+  const cols = '140px 1fr 120px 110px';
+  const colHeader = `<div style="display:grid;grid-template-columns:${cols};gap:8px;padding:6px 0 6px;border-bottom:2px solid var(--border)"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Categoria</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Descrição</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);text-align:right">Valor</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Método</span></div>`;
+  const rows = despesas.map(dep=>{
+    const dtLine = dep.dt?`<div style="font-size:10px;color:var(--text2);margin-top:2px">Venc. ${dep.dt}</div>`:'';
+    return `<div style="display:grid;grid-template-columns:${cols};gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:start"><div style="font-size:11px;font-weight:700;color:var(--text)">${dep.cat||'—'}</div><div style="font-size:12px;color:var(--text);word-break:break-word;white-space:normal;line-height:1.4">${dep.desc||'—'}${dtLine}</div><div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right">${adpFmtValor(adpParseValor(dep.valor))}</div><div style="font-size:11px;color:var(--gray)">${dep.metodo||'—'}</div></div>`;
+  }).join('');
+  const totalRow = `<div style="display:grid;grid-template-columns:${cols};gap:8px;padding:8px 0 0;border-top:2px solid var(--border)"><div></div><div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">Total das despesas</div><div style="font-size:14px;font-weight:800;color:var(--vinho);text-align:right">${adpFmtValor(totalDia)}</div><div></div></div>`;
+  const saldoLine = d.saldo?`<div style="font-size:11px;color:#166534;margin-top:4px;font-weight:600">💰 Saldo do dia: ${adpFmtValor(adpParseValor(d.saldo))}</div>`:'';
+  const el = document.getElementById(`adp-card-${dia}`) || document.querySelector(`[onclick="adpToggleCard('${dia}')"]`)?.closest('.adp-day-card');
+  if(el) el.outerHTML = `<div class="adp-day-card" id="adp-card-${dia}">
+    <div class="adp-day-header">
+      <div><div class="adp-day-date">📅 Despesas (${adpFmtData(dia)})</div>${saldoLine}</div>
+      <span style="font-size:11px;color:var(--text2);cursor:pointer" onclick="adpRenderCards()">▲ recolher</span>
+    </div>
+    <div class="adp-day-body">${colHeader}${rows}${totalRow}</div>
+    <div class="adp-status-bar" style="justify-content:flex-end">
+      <span class="adp-approved-tag" style="margin-right:auto">✅ Aprovado por ${d.aprovadoPor} em ${adpFmtData(d.aprovadoEm?.split('T')[0])}</span>
+    </div>
+  </div>`;
 }
 
 function adpAprovarDia(dia){
