@@ -1382,11 +1382,12 @@
           <!-- data oculta — preenchida automaticamente com hoje -->
           <input type="hidden" id="adp-data">
 
-          <div id="adp-fields-wrap" style="margin-bottom:12px">
-            <div>
-              <div class="adp-form-label">Saldo Bancário do Dia (R$) <span style="font-weight:400;text-transform:none;font-size:10px">— extraído automaticamente · editável</span></div>
-              <input type="text" id="adp-saldo" class="adp-form-input" placeholder="Ex: 12.450,00" style="max-width:240px">
+          <div id="adp-fields-wrap" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="adp-form-label" style="margin-bottom:0;white-space:nowrap">Saldo do dia:</div>
+              <input type="text" id="adp-saldo" class="adp-form-input" placeholder="R$ 0,00" style="max-width:160px">
             </div>
+            <span style="font-size:10px;color:var(--text2)">extraído automaticamente · editável</span>
           </div>
 
           <!-- Upload — compacto -->
@@ -1423,7 +1424,7 @@
           </div>
 
           <div id="adp-save-btns" style="display:flex;gap:8px;margin-top:14px">
-            <button onclick="adpSalvarMovimentacao()" style="flex:1;padding:9px;background:var(--vinho);color:var(--marfim);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">💾 Salvar Movimentação</button>
+            <button onclick="adpConfirmarAprovacao()" id="adp-btn-aprovar" style="flex:1;padding:9px;background:var(--vinho);color:var(--marfim);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">✅ Confirmar Aprovação</button>
           </div>
         </div>
       </div>
@@ -6789,18 +6790,22 @@ function adpRender(){
 }
 
 function adpRenderAddWrap(){
-  const podeAdd = ADP_USUARIOS_ADD.includes(aprovUsuario);
-  const fields = document.getElementById('adp-fields-wrap');
-  const saveBtns = document.getElementById('adp-save-btns');
-  const permMsg = document.getElementById('adp-perm-msg');
-  const despList = document.getElementById('adp-despesas-list');
-  const addLinhaBtn = despList?.parentElement?.querySelector('button');
-  if(fields) fields.style.opacity = podeAdd ? '1' : '.45';
-  if(fields) fields.style.pointerEvents = podeAdd ? '' : 'none';
+  const podeAdd    = ADP_USUARIOS_ADD.includes(aprovUsuario);
+  const podeAprovar= aprovUsuario === ADP_USUARIO_APROV;
+  const fields     = document.getElementById('adp-fields-wrap');
+  const saveBtns   = document.getElementById('adp-save-btns');
+  const btnAprovar = document.getElementById('adp-btn-aprovar');
+  const permMsg    = document.getElementById('adp-perm-msg');
+  const despList   = document.getElementById('adp-despesas-list');
+  const addLinhaBtn= despList?.parentElement?.querySelector('button');
+  const dropZone   = document.getElementById('adp-drop-zone');
+  const fileInput  = document.getElementById('adp-file-input');
+
+  if(fields){ fields.style.opacity = podeAdd ? '1' : '.45'; fields.style.pointerEvents = podeAdd ? '' : 'none'; }
+  // Mostra área de salvar só para quem pode adicionar; botão de aprovar só para Dra. Mone
   if(saveBtns) saveBtns.style.display = podeAdd ? 'flex' : 'none';
+  if(btnAprovar) btnAprovar.style.display = podeAprovar ? '' : 'none';
   if(permMsg) permMsg.style.display = podeAdd ? 'none' : '';
-  const dropZone = document.getElementById('adp-drop-zone');
-  const fileInput = document.getElementById('adp-file-input');
   if(dropZone){ dropZone.style.opacity = podeAdd ? '1' : '.45'; dropZone.style.pointerEvents = podeAdd ? '' : 'none'; }
   if(fileInput) fileInput.disabled = !podeAdd;
   if(addLinhaBtn){ addLinhaBtn.style.display = podeAdd ? '' : 'none'; }
@@ -6857,7 +6862,7 @@ function adpRenderCards(){
   const dias = (meses[adpMesAtivo]?.dias || []).sort().reverse();
 
   if(dias.length === 0){
-    wrap.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text2);font-size:12px">Nenhuma movimentação registrada para este mês.</div>`;
+    wrap.innerHTML = '';
     return;
   }
 
@@ -6866,21 +6871,52 @@ function adpRenderCards(){
     const despesas = d.despesas || [];
     const totalDia = despesas.reduce((s,i) => s + adpParseValor(i.valor), 0);
     const aprovado = !!d.aprovadoPor;
-    const pendente = !aprovado;
-    const podeAprovar = aprovUsuario === ADP_USUARIO_APROV;
+    const podeExcluir = ADP_USUARIOS_ADD.includes(aprovUsuario);
 
-    const despHtml = despesas.map((dep,i) => {
-      const cat   = dep.cat   ? `<span style="font-size:10px;font-weight:700;color:var(--text2);background:var(--surface2);border-radius:5px;padding:1px 7px;margin-right:6px">${dep.cat}</span>` : '';
-      const metodo= dep.metodo? `<span style="font-size:10px;color:var(--gray);margin-left:6px;font-style:italic">${dep.metodo}</span>` : '';
-      const dt    = dep.dt    ? `<span style="font-size:10px;color:var(--text2);margin-left:6px">venc. ${dep.dt}</span>` : '';
+    // Card colapsado (aprovado): só mostra título clicável
+    if(aprovado){
       return `
-      <div class="adp-despesa-row">
-        <div class="adp-despesa-desc" style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:2px;flex:1">
-          ${cat}<span>${i+1}. ${dep.desc||'—'}</span>${dt}${metodo}
+      <div class="adp-day-card" style="cursor:pointer" onclick="adpToggleCard('${dia}')">
+        <div class="adp-day-header" style="padding:10px 16px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="adp-approved-tag">✅</span>
+            <div class="adp-day-date">Despesas (${adpFmtData(dia)})</div>
+            <span style="font-size:11px;color:var(--text2)">${despesas.length} despesa${despesas.length!==1?'s':''} · ${adpFmtValor(totalDia)}</span>
+          </div>
+          <span style="font-size:11px;color:var(--text2);cursor:pointer">▼ ver detalhes</span>
         </div>
-        <div class="adp-despesa-val">${adpFmtValor(adpParseValor(dep.valor))}</div>
+      </div>`;
+    }
+
+    // Cabeçalho das colunas
+    const colHeader = `
+      <div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:2px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Categoria</span>
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Descrição</span>
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);text-align:right">Valor</span>
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Método</span>
+      </div>`;
+
+    const despHtml = despesas.map((dep,idx) => {
+      const cat   = dep.cat   ? `<span style="font-size:11px;font-weight:700;color:var(--text)">${dep.cat}</span>` : '<span style="color:var(--text2)">—</span>';
+      const dt    = dep.dt    ? ` <span style="font-size:10px;color:var(--text2)">(venc. ${dep.dt})</span>` : '';
+      return `
+      <div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <div>${cat}</div>
+        <div style="font-size:12px;color:var(--text)">${dep.desc||'—'}${dt}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right">${adpFmtValor(adpParseValor(dep.valor))}</div>
+        <div style="font-size:11px;color:var(--gray)">${dep.metodo||'—'}</div>
       </div>`;
     }).join('');
+
+    // Linha total
+    const totalRow = `
+      <div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:8px 0 2px">
+        <div></div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">Total</div>
+        <div style="font-size:13px;font-weight:800;color:var(--vinho);text-align:right">${adpFmtValor(totalDia)}</div>
+        <div></div>
+      </div>`;
 
     const imgHtml = d.arquivo && d.arquivo.tipo && d.arquivo.tipo.startsWith('image/') && d.arquivo.base64
       ? `<div style="margin-top:10px"><img src="${d.arquivo.base64}" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border);object-fit:contain" alt="Comprovante"></div>`
@@ -6889,35 +6925,62 @@ function adpRenderCards(){
         : '';
 
     return `
-    <div class="adp-day-card">
+    <div class="adp-day-card" id="adp-card-${dia}">
       <div class="adp-day-header">
         <div>
-          <div class="adp-day-date">📅 ${adpFmtData(dia)}</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:2px">Adicionado por: <strong>${d.criadoPor||'—'}</strong></div>
+          <div class="adp-day-date">📅 Despesas (${adpFmtData(dia)})</div>
+          ${d.saldo?`<div style="font-size:11px;color:#166534;margin-top:3px;font-weight:600">Saldo do dia: ${adpFmtValor(adpParseValor(d.saldo))}</div>`:''}
         </div>
         <div class="adp-day-meta">
           <span class="adp-day-badge" style="background:rgba(139,45,66,.1);color:var(--vinho)">${despesas.length} despesa${despesas.length!==1?'s':''}</span>
-          <span class="adp-day-badge" style="background:rgba(139,45,66,.15);color:var(--vinho);font-size:11px;font-weight:800">${adpFmtValor(totalDia)}</span>
-          ${d.saldo?`<span class="adp-day-badge" style="background:rgba(22,101,52,.08);color:#166534">Saldo: ${adpFmtValor(adpParseValor(d.saldo))}</span>`:''}
+          ${podeExcluir?`<button onclick="adpExcluirDia('${dia}')" style="background:none;border:none;color:var(--text2);font-size:12px;cursor:pointer;padding:0" title="Remover">🗑</button>`:''}
         </div>
       </div>
       <div class="adp-day-body">
+        ${colHeader}
         ${despHtml}
+        ${totalRow}
         ${imgHtml}
       </div>
       <div class="adp-status-bar">
-        ${aprovado
-          ? `<span class="adp-approved-tag">✅ Aprovado por ${d.aprovadoPor} em ${adpFmtData(d.aprovadoEm?.split('T')[0])}</span>`
-          : `<span class="adp-pending-tag">⏳ Aguardando aprovação</span>`
-        }
-        ${pendente && podeAprovar
-          ? `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-left:auto;font-size:12px;font-weight:700;color:#166534">
-              <input type="checkbox" onchange="adpAprovar('${dia}',this.checked)" style="accent-color:#166534;width:15px;height:15px;cursor:pointer">
-              Confirmar aprovação de despesas
-            </label>`
-          : ''
-        }
-        ${ADP_USUARIOS_ADD.includes(aprovUsuario) ? `<button onclick="adpExcluirDia('${dia}')" style="margin-left:auto;background:none;border:none;color:var(--text2);font-size:12px;cursor:pointer;padding:0" title="Remover">🗑</button>` : ''}
+        <span class="adp-pending-tag">⏳ Aguardando aprovação</span>
+        <button onclick="adpAprovarDia('${dia}')" style="margin-left:auto;padding:7px 18px;background:#166534;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);display:${aprovUsuario===ADP_USUARIO_APROV?'':'none'}">✅ Confirmar Aprovação</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function adpToggleCard(dia){
+  // Expande card aprovado para ver detalhes — re-renderiza sem colapso
+  // Para simplificar, apenas re-renderiza mostrando os dados do dia
+  const wrap = document.getElementById('adp-cards-wrap');
+  const d = adpData[dia];
+  if(!d) return;
+  const despesas = d.despesas||[];
+  const totalDia = despesas.reduce((s,i)=>s+adpParseValor(i.valor),0);
+  const el = document.getElementById(`adp-card-${dia}`) || wrap.querySelector(`[onclick*="${dia}"]`)?.closest('.adp-day-card');
+  // Substitui por versão expandida temporariamente
+  const colHeader = `<div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:2px"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Categoria</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Descrição</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);text-align:right">Valor</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Método</span></div>`;
+  const rows = despesas.map(dep=>`<div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><div style="font-size:11px;font-weight:700;color:var(--text)">${dep.cat||'—'}</div><div style="font-size:12px;color:var(--text)">${dep.desc||'—'}${dep.dt?` <span style="font-size:10px;color:var(--text2)">(venc. ${dep.dt})</span>`:''}</div><div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right">${adpFmtValor(adpParseValor(dep.valor))}</div><div style="font-size:11px;color:var(--gray)">${dep.metodo||'—'}</div></div>`).join('');
+  const totalRow = `<div style="display:grid;grid-template-columns:140px 1fr 110px 100px;gap:8px;padding:8px 0 2px"><div></div><div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">Total</div><div style="font-size:13px;font-weight:800;color:var(--vinho);text-align:right">${adpFmtValor(totalDia)}</div><div></div></div>`;
+  if(el) el.outerHTML = `<div class="adp-day-card" id="adp-card-${dia}"><div class="adp-day-header"><div><div class="adp-day-date">📅 Despesas (${adpFmtData(dia)})</div>${d.saldo?`<div style="font-size:11px;color:#166534;margin-top:3px;font-weight:600">Saldo: ${adpFmtValor(adpParseValor(d.saldo))}</div>`:''}</div><span style="font-size:11px;color:var(--text2);cursor:pointer" onclick="adpRenderCards()">▲ recolher</span></div><div class="adp-day-body">${colHeader}${rows}${totalRow}</div><div class="adp-status-bar"><span class="adp-approved-tag">✅ Aprovado por ${d.aprovadoPor} em ${adpFmtData(d.aprovadoEm?.split('T')[0])}</span></div></div>`;
+}
+
+function adpAprovarDia(dia){
+  if(aprovUsuario !== ADP_USUARIO_APROV) return;
+  if(!confirm(`Confirmar aprovação das despesas de ${adpFmtData(dia)}?`)) return;
+  adpData[dia].aprovadoPor = aprovUsuario;
+  adpData[dia].aprovadoEm  = new Date().toISOString();
+  adpSalvar();
+  adpRenderCards();
+  adpRenderKpis();
+}
+
+// mantém compatibilidade com checkbox antigo se existir
+function adpAprovar(dia, checked){
+  if(!checked) return;
+  adpAprovarDia(dia);
+}
       </div>
     </div>`;
   }).join('');
@@ -7114,14 +7177,10 @@ function adpFindCol(header, patterns){
 
 function adpBreviarDesc(desc){
   if(!desc) return '';
-  // Remove sufixos após " - Ref " ou " – Ref " (longa explicação)
-  let s = desc.replace(/\s*[-–]\s*Ref\s+.*/i, '').trim();
-  // Remove " - Parcela X/Y" e similares
-  s = s.replace(/\s*[-–]\s*Parcela\s+\d+\/\d+.*/i, '').trim();
-  // Remove texto redundante entre parênteses no fim
-  s = s.replace(/\s*\([^)]{30,}\)\s*$/, '').trim();
-  // Limita a 60 chars e adiciona reticências se necessário
-  if(s.length > 60) s = s.slice(0, 57) + '…';
+  // Remove " - Parcela X/Y" do fim (informação de controle, não descritiva)
+  let s = desc.replace(/\s*[-–]\s*Parcela\s+\d+\/\d+\s*$/i, '').trim();
+  // Remove ponto final isolado no fim
+  s = s.replace(/\.\s*$/, '').trim();
   return s;
 }
 
@@ -7234,10 +7293,10 @@ function adpSalvarMovimentacaoAuto(data, saldo, despesas){
   adpAgendarRenotificacao(data);
 }
 
-// ── Salvar movimentação ──
+// ── Salvar movimentação (interno — usado pelo auto-save) ──
 function adpSalvarMovimentacao(){
-  const data = document.getElementById('adp-data').value;
-  if(!data){ alert('Informe a data.'); return; }
+  if(!ADP_USUARIOS_ADD.includes(aprovUsuario)){ alert('Sem permissão para adicionar.'); return; }
+  const data = document.getElementById('adp-data').value || new Date().toISOString().split('T')[0];
   const saldo = document.getElementById('adp-saldo').value.trim();
   const despesas = adpDespesasTemp.filter(d => d.desc || d.valor);
   if(despesas.length === 0){ alert('Adicione ao menos uma despesa.'); return; }
@@ -7253,16 +7312,39 @@ function adpSalvarMovimentacao(){
   };
   adpSalvar();
   adpArquivoTemp = null;
-  adpFecharForm();
-
-  // Ajusta mês ativo para o mês da data inserida
   adpMesAtivo = data.slice(0,7);
   adpRender();
-
-  // Dispara notificação imediata para Dra. Mone
   adpNotificar(data, 'imediata');
-  // Agenda renotificações a cada 3h enquanto não aprovado
   adpAgendarRenotificacao(data);
+}
+
+// ── Confirmar aprovação (botão do formulário — só Dra. Mone) ──
+function adpConfirmarAprovacao(){
+  if(aprovUsuario !== ADP_USUARIO_APROV){
+    alert('Somente Dra. Mone pode confirmar a aprovação.');
+    return;
+  }
+  const data = document.getElementById('adp-data').value || new Date().toISOString().split('T')[0];
+  const despesas = adpDespesasTemp.filter(d => d.desc || d.valor);
+  if(despesas.length === 0){ alert('Nenhuma despesa para aprovar.'); return; }
+
+  const saldo = document.getElementById('adp-saldo').value.trim();
+  adpData[data] = {
+    saldo,
+    despesas,
+    arquivo: adpArquivoTemp || null,
+    criadoPor: aprovUsuario,
+    adicionadoEm: new Date().toISOString(),
+    aprovadoPor: aprovUsuario,
+    aprovadoEm: new Date().toISOString()
+  };
+  adpSalvar();
+  adpArquivoTemp = null;
+  adpDespesasTemp = [];
+  document.getElementById('adp-saldo').value = '';
+  adpMesAtivo = data.slice(0,7);
+  adpRender();
+  adpSetStatus(`✅ Despesas de ${adpFmtData(data)} aprovadas.`, false);
 }
 
 // ── Aprovar ──
