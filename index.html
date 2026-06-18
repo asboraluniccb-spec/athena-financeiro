@@ -6864,25 +6864,27 @@ function adpRenderAddWrap(){
 
 function adpRenderKpis(){
   const el = document.getElementById('adp-kpis');
-  if(!el) return;
+  // Calcula sempre (mesmo com painel oculto) para atualizar quando ficar visível
   const todos = Object.values(adpData);
-  const totalDespesas = todos.reduce((s,d) => s + (d.despesas||[]).length, 0);
-  const totalValor = todos.reduce((s,d) => s + (d.despesas||[]).reduce((ss,i) => ss + adpParseValor(i.valor), 0), 0);
-  const mediaDia = todos.length > 0 ? totalValor / todos.length : 0;
+  // Conta apenas dias com despesas reais (exclui dias só com saldo)
+  const diasComDespesas = todos.filter(d => (d.despesas||[]).length > 0);
+  const totalDespesas = diasComDespesas.reduce((s,d) => s + d.despesas.length, 0);
+  const totalValor    = diasComDespesas.reduce((s,d) => s + d.despesas.reduce((ss,i) => ss + adpParseValor(i.valor), 0), 0);
+  const mediaDia      = diasComDespesas.length > 0 ? totalValor / diasComDespesas.length : 0;
+  const mediaPorDespesa = totalDespesas > 0 ? totalValor / totalDespesas : 0;
 
-  // dia com maior movimentação
+  // dia com maior movimentação (soma de despesas, não saldo)
   let maiorDia = '', maiorVal = 0;
   Object.entries(adpData).forEach(([k,d]) => {
     const v = (d.despesas||[]).reduce((s,i) => s + adpParseValor(i.valor), 0);
     if(v > maiorVal){ maiorVal = v; maiorDia = k; }
   });
 
-  const mediaPorDespesa = totalDespesas > 0 ? totalValor / totalDespesas : 0;
-
+  if(!el) return;
   el.innerHTML = `
-    <div class="adp-kpi"><div class="adp-kpi-label">Nº de Despesas</div><div class="adp-kpi-value">${totalDespesas}</div><div class="adp-kpi-sub">em ${todos.length} dia${todos.length!==1?'s':''}</div></div>
+    <div class="adp-kpi"><div class="adp-kpi-label">Nº de Despesas</div><div class="adp-kpi-value">${totalDespesas}</div><div class="adp-kpi-sub">em ${diasComDespesas.length} dia${diasComDespesas.length!==1?'s':''}</div></div>
     <div class="adp-kpi"><div class="adp-kpi-label">Valor Total</div><div class="adp-kpi-value" style="font-size:16px">${adpFmtValor(totalValor)}</div></div>
-    <div class="adp-kpi"><div class="adp-kpi-label">Dia com Maior Movimentação</div><div class="adp-kpi-value" style="font-size:15px">${maiorDia?adpFmtData(maiorDia):'—'}</div><div class="adp-kpi-sub">${maiorDia?adpFmtValor(maiorVal):''}</div></div>
+    <div class="adp-kpi"><div class="adp-kpi-label">Dia c/ Maior Movimentação</div><div class="adp-kpi-value" style="font-size:15px">${maiorDia?adpFmtData(maiorDia):'—'}</div><div class="adp-kpi-sub">${maiorDia?adpFmtValor(maiorVal):''}</div></div>
     <div class="adp-kpi"><div class="adp-kpi-label">Média por Dia</div><div class="adp-kpi-value" style="font-size:16px">${adpFmtValor(mediaDia)}</div></div>
     <div class="adp-kpi"><div class="adp-kpi-label">Média por Despesa</div><div class="adp-kpi-value" style="font-size:16px">${adpFmtValor(mediaPorDespesa)}</div><div class="adp-kpi-sub">valor médio individual</div></div>`;
 }
@@ -7318,13 +7320,14 @@ function adpExtrairDespesasExcel(rows){
   adpDespesasTemp = novas;
   adpRenderLinhasDespesa();
 
-  adpSetStatus(`✅ ${novas.length} despesa${novas.length!==1?'s':''} importada${novas.length!==1?'s':''}  —  salvando...`, false);
+  // Sem mensagem de "salvando" — salva silenciosamente
+  adpSetStatus('', false);
   setTimeout(() => adpSalvarMovimentacaoAuto(dataForm, saldoEncontrado, novas), 300);
 }
 
 function adpSalvarMovimentacaoAuto(data, saldo, despesas){
   if(!ADP_USUARIOS_ADD.includes(aprovUsuario)){
-    adpSetStatus('Dados importados. Selecione um usuário autorizado para salvar.', false);
+    adpSetStatus('Selecione um usuário autorizado para salvar.', false);
     return;
   }
   adpData[data] = {
@@ -7340,7 +7343,7 @@ function adpSalvarMovimentacaoAuto(data, saldo, despesas){
   adpArquivoTemp = null;
   adpMesAtivo = data.slice(0,7);
   adpRender();
-  adpSetStatus(`✅ ${despesas.length} despesa${despesas.length!==1?'s':''} salva${despesas.length!==1?'s':''} em ${adpFmtData(data)}`, false);
+  adpSetStatus('', false); // sem mensagem após salvar
   adpNotificar(data, 'imediata');
   adpAgendarRenotificacao(data);
 }
