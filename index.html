@@ -1562,8 +1562,8 @@
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
               <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text2)">Juros</span>
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text2)">
-                <input type="checkbox" id="sn-juros-ativo" onchange="snCalcAuto()" style="cursor:pointer"> Ativar juros
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text2);pointer-events:auto;user-select:none">
+                <input type="checkbox" id="sn-juros-ativo" onchange="snToggleJurosCampos();snCalc();" style="cursor:pointer;pointer-events:auto;width:16px;height:16px;accent-color:var(--vinho)"> Ativar juros
               </label>
             </div>
             <div id="sn-juros-campos" style="display:none">
