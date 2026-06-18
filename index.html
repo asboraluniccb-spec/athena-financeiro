@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- v20260618-1534 -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -583,6 +582,7 @@
     <button class="tab" onclick="switchTab('desativacao')">Desativação <span class="tab-badge" id="badge-desativacao">0</span></button>
     <button class="tab" onclick="switchTab('conciliacao')">Conciliações</button>
     <button class="tab" onclick="switchTab('aprovacoes')">Aprovações</button>
+    <button class="tab" onclick="switchTab('vendas')">Relacionamento</button>
   </div>
 </div>
 
@@ -1461,6 +1461,211 @@
       </div>
       <button class="adp-notif-close" onclick="adpFecharNotif()">×</button>
     </div>
+
+  </div>
+
+  <!-- ===== RELACIONAMENTO / SIMULADOR DE NEGOCIAÇÃO ===== -->
+  <div class="tab-content" id="tab-vendas">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div class="section-title">Simulador de Negociação <span>Simule formas de pagamento sem gerar registros financeiros</span></div>
+      <button onclick="snLimpar()" style="display:flex;align-items:center;gap:8px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font-body);cursor:pointer">
+        ↺ Limpar
+      </button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start">
+
+      <!-- ── PAINEL ESQUERDO: INPUTS ── -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px">
+
+        <!-- Dados do paciente -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">Dados do Paciente</div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label>Nome do Paciente <span style="color:var(--vinho)">*</span></label>
+          <input type="text" id="sn-nome" placeholder="Nome completo" style="font-size:13px" oninput="snCalc()">
+        </div>
+        <div class="form-group" style="margin-bottom:18px">
+          <label>Valor Total do Tratamento (R$) <span style="color:var(--vinho)">*</span></label>
+          <input type="number" id="sn-valor" placeholder="0,00" step="0.01" min="0" style="font-size:14px;font-weight:700" oninput="snCalc()">
+        </div>
+
+        <!-- Modalidade -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">Modalidade de Pagamento</div>
+        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+          <button id="sn-mod-avista-nf" onclick="snSetMod('avista-nf')"
+            style="padding:7px 12px;border-radius:7px;border:1px solid var(--border);background:var(--vinho);color:var(--marfim);font-size:11px;font-weight:700;font-family:var(--font-body);cursor:pointer;transition:all .15s">
+            À Vista c/ NF
+          </button>
+          <button id="sn-mod-avista-snf" onclick="snSetMod('avista-snf')"
+            style="padding:7px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;font-family:var(--font-body);cursor:pointer;transition:all .15s">
+            À Vista s/ NF
+          </button>
+          <button id="sn-mod-prazo" onclick="snSetMod('prazo')"
+            style="padding:7px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;font-family:var(--font-body);cursor:pointer;transition:all .15s">
+            A Prazo
+          </button>
+        </div>
+
+        <!-- À Vista com NF -->
+        <div id="sn-panel-avista-nf" style="">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div class="form-group">
+              <label>Desconto (%)</label>
+              <input type="number" id="sn-nf-desc" value="10" min="0" max="100" step="0.5" style="font-size:13px" oninput="snCalc()">
+            </div>
+            <div class="form-group">
+              <label>Valor Final</label>
+              <div id="sn-nf-resultado" style="font-size:16px;font-weight:800;color:var(--vinho);padding:8px 0">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- À Vista sem NF -->
+        <div id="sn-panel-avista-snf" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div class="form-group">
+              <label>Desconto (%)</label>
+              <input type="number" id="sn-snf-desc" value="15" min="0" max="100" step="0.5" style="font-size:13px" oninput="snCalc()">
+            </div>
+            <div class="form-group">
+              <label>Valor Final</label>
+              <div id="sn-snf-resultado" style="font-size:16px;font-weight:800;color:var(--vinho);padding:8px 0">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- A Prazo -->
+        <div id="sn-panel-prazo" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div class="form-group">
+              <label>Entrada (R$)</label>
+              <input type="number" id="sn-entrada" value="0" min="0" step="0.01" style="font-size:13px" oninput="snCalc()">
+            </div>
+            <div class="form-group">
+              <label>Nº de Parcelas</label>
+              <input type="number" id="sn-parcelas" value="6" min="1" max="60" style="font-size:13px" oninput="snCalcAuto()">
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div class="form-group">
+              <label>Venc. da Entrada</label>
+              <input type="date" id="sn-venc-entrada" style="font-size:13px" oninput="snCalc()">
+            </div>
+            <div class="form-group">
+              <label>1ª Parcela</label>
+              <input type="date" id="sn-venc-parcela" style="font-size:13px" oninput="snCalc()">
+            </div>
+          </div>
+
+          <!-- Juros -->
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text2)">Juros</span>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text2)">
+                <input type="checkbox" id="sn-juros-ativo" onchange="snCalcAuto()" style="cursor:pointer"> Ativar juros
+              </label>
+            </div>
+            <div id="sn-juros-campos" style="display:none">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+                <div class="form-group">
+                  <label>Taxa (% ao ano)</label>
+                  <input type="number" id="sn-juros-taxa" value="5" min="0" max="100" step="0.1" style="font-size:13px" oninput="snCalc()">
+                </div>
+                <div class="form-group">
+                  <label>Aplicação dos juros</label>
+                  <select id="sn-juros-modo" style="font-size:12px" onchange="snCalc()">
+                    <option value="extra">Parcelas extras no final</option>
+                    <option value="proporcional">Distribuir nas parcelas</option>
+                  </select>
+                </div>
+              </div>
+              <div id="sn-juros-equiv" style="font-size:10px;color:var(--text2)"></div>
+            </div>
+            <div id="sn-juros-off" style="font-size:11px;color:var(--text2)">Sem juros para esta simulação</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── PAINEL DIREITO: RESULTADO ── -->
+      <div>
+
+        <!-- Comparativo de Cenários -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);margin-bottom:14px">Comparativo de Cenários</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px" id="sn-cenarios">
+
+            <!-- Cenário 1: À Vista c/ 7% desc -->
+            <div style="background:var(--surface2);border-radius:10px;border:1px solid var(--border);padding:14px 12px">
+              <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);margin-bottom:10px">À Vista · 7% desc</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Original</div>
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px" id="sn-cen1-orig">—</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Desconto</div>
+              <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:6px" id="sn-cen1-desc">—</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Valor Final</div>
+              <div style="font-size:15px;font-weight:800;color:var(--vinho)" id="sn-cen1-final">—</div>
+            </div>
+
+            <!-- Cenário 2: A Prazo c/ Entrada -->
+            <div style="background:var(--surface2);border-radius:10px;border:1px solid var(--border);padding:14px 12px">
+              <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);margin-bottom:10px">A Prazo c/ Entrada</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Entrada</div>
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px" id="sn-cen2-entrada">—</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Parcelas</div>
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px" id="sn-cen2-parc">—</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Total</div>
+              <div style="font-size:15px;font-weight:800;color:var(--vinho)" id="sn-cen2-total">—</div>
+            </div>
+
+            <!-- Cenário 3: A Prazo s/ Entrada -->
+            <div style="background:var(--surface2);border-radius:10px;border:1px solid var(--border);padding:14px 12px">
+              <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);margin-bottom:10px">A Prazo s/ Entrada</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Parcelas</div>
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px" id="sn-cen3-parc">—</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Valor/mês</div>
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px" id="sn-cen3-valmens">—</div>
+              <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Total</div>
+              <div style="font-size:15px;font-weight:800;color:var(--vinho)" id="sn-cen3-total">—</div>
+            </div>
+
+            <!-- Cenário 4: Simulação Atual -->
+            <div style="background:rgba(139,45,66,.06);border-radius:10px;border:2px solid var(--vinho);padding:14px 12px">
+              <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--vinho);margin-bottom:10px">Simulação Atual</div>
+              <div id="sn-cen4-resumo" style="font-size:11px;color:var(--text);line-height:1.7">
+                <span style="color:var(--text2)">Preencha os dados</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Tabela de parcelas (só para A Prazo) -->
+        <div id="sn-tabela-wrap" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:none">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">Tabela de Parcelas</div>
+            <div style="font-size:11px;color:var(--text2)" id="sn-table-info"></div>
+          </div>
+          <div style="max-height:460px;overflow-y:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="background:var(--vinho-p)">
+                  <th style="padding:10px 14px;text-align:left;color:var(--warm);font-size:10px;font-weight:400;letter-spacing:.28em;text-transform:uppercase">#</th>
+                  <th style="padding:10px 14px;text-align:left;color:var(--warm);font-size:10px;font-weight:400;letter-spacing:.28em;text-transform:uppercase">Vencimento</th>
+                  <th style="padding:10px 14px;text-align:right;color:var(--warm);font-size:10px;font-weight:400;letter-spacing:.28em;text-transform:uppercase">Valor</th>
+                  <th style="padding:10px 14px;text-align:left;color:var(--warm);font-size:10px;font-weight:400;letter-spacing:.28em;text-transform:uppercase">Origem</th>
+                </tr>
+              </thead>
+              <tbody id="sn-tbody">
+                <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text2);font-size:13px">Preencha os dados para simular</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /tab-vendas -->
 
   </div>
 
@@ -7558,6 +7763,318 @@ aprovInit();
 document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); });
 });
+
+// ══════════════════════════════════════════════════════════════════════
+// SIMULADOR DE NEGOCIAÇÃO (Relacionamento / Vendas)
+// ══════════════════════════════════════════════════════════════════════
+let _snMod = 'avista-nf'; // modalidade ativa
+
+function snFmt(v){ return `R$ ${(+v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.')}`; }
+function snFmtDate(iso){
+  if(!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function snAddMes(iso, n){
+  const d = new Date(iso + 'T12:00:00');
+  d.setMonth(d.getMonth() + n);
+  return d.toISOString().slice(0,10);
+}
+
+function snSetMod(mod){
+  _snMod = mod;
+  ['avista-nf','avista-snf','prazo'].forEach(m => {
+    const btn = document.getElementById('sn-mod-'+m);
+    const panel = document.getElementById('sn-panel-'+m);
+    const active = m === mod;
+    if(btn){
+      btn.style.background = active ? 'var(--vinho)' : 'var(--surface2)';
+      btn.style.color = active ? 'var(--marfim)' : 'var(--text2)';
+      btn.style.borderColor = active ? 'var(--vinho)' : 'var(--border)';
+    }
+    if(panel) panel.style.display = active ? '' : 'none';
+  });
+  const tabelaWrap = document.getElementById('sn-tabela-wrap');
+  if(tabelaWrap) tabelaWrap.style.display = mod === 'prazo' ? '' : 'none';
+  snCalc();
+}
+
+// Acionado quando Nº parcelas muda: auto-ativa juros se >6
+function snCalcAuto(){
+  const n = parseInt(document.getElementById('sn-parcelas')?.value)||0;
+  const ativoEl = document.getElementById('sn-juros-ativo');
+  if(ativoEl && n > 6 && !ativoEl.checked){
+    ativoEl.checked = true;
+  }
+  snToggleJurosCampos();
+  snCalc();
+}
+
+function snToggleJurosCampos(){
+  const ativo = document.getElementById('sn-juros-ativo')?.checked;
+  const campos = document.getElementById('sn-juros-campos');
+  const off    = document.getElementById('sn-juros-off');
+  if(campos) campos.style.display = ativo ? '' : 'none';
+  if(off)    off.style.display    = ativo ? 'none' : '';
+}
+
+function snGetTaxaMensal(){
+  const ativo = document.getElementById('sn-juros-ativo')?.checked;
+  if(!ativo) return 0;
+  const taxaAno = parseFloat(document.getElementById('sn-juros-taxa')?.value)||0;
+  if(taxaAno <= 0) return 0;
+  return Math.pow(1 + taxaAno/100, 1/12) - 1;
+}
+
+function snCalc(){
+  snToggleJurosCampos();
+  const valor = parseFloat(document.getElementById('sn-valor')?.value)||0;
+
+  // Equivalência de juros
+  const taxaAnoV = parseFloat(document.getElementById('sn-juros-taxa')?.value)||0;
+  const equivEl = document.getElementById('sn-juros-equiv');
+  if(equivEl && taxaAnoV > 0){
+    const mes = (Math.pow(1+taxaAnoV/100,1/12)-1)*100;
+    equivEl.textContent = `≈ ${mes.toFixed(4)}% ao mês`;
+  } else if(equivEl){ equivEl.textContent = ''; }
+
+  // ── Comparativo de cenários (sempre calculado) ──
+  const cen1Orig  = document.getElementById('sn-cen1-orig');
+  const cen1Desc  = document.getElementById('sn-cen1-desc');
+  const cen1Final = document.getElementById('sn-cen1-final');
+  if(cen1Orig)  cen1Orig.textContent  = valor > 0 ? snFmt(valor) : '—';
+  if(cen1Desc)  cen1Desc.textContent  = valor > 0 ? '− '+snFmt(valor*0.07) : '—';
+  if(cen1Final) cen1Final.textContent = valor > 0 ? snFmt(valor*0.93) : '—';
+
+  // Cenário 2: a prazo c/ entrada — 30% entrada, 12x sem juros
+  const cen2E = valor*0.30;
+  const cen2Base = valor - cen2E;
+  const cen2N = 12;
+  const cen2P = cen2Base/cen2N;
+  const cen2T = cen2E + cen2Base;
+  const cen2Entrada = document.getElementById('sn-cen2-entrada');
+  const cen2Parc    = document.getElementById('sn-cen2-parc');
+  const cen2Total   = document.getElementById('sn-cen2-total');
+  if(cen2Entrada) cen2Entrada.textContent = valor > 0 ? snFmt(cen2E) : '—';
+  if(cen2Parc)    cen2Parc.textContent    = valor > 0 ? `${cen2N}x de ${snFmt(cen2P)}` : '—';
+  if(cen2Total)   cen2Total.textContent   = valor > 0 ? snFmt(cen2T) : '—';
+
+  // Cenário 3: a prazo s/ entrada — 6x sem juros
+  const cen3N = 6;
+  const cen3P = valor/cen3N;
+  const cen3Parc    = document.getElementById('sn-cen3-parc');
+  const cen3VaMens  = document.getElementById('sn-cen3-valmens');
+  const cen3Total   = document.getElementById('sn-cen3-total');
+  if(cen3Parc)   cen3Parc.textContent   = valor > 0 ? `${cen3N}x` : '—';
+  if(cen3VaMens) cen3VaMens.textContent = valor > 0 ? snFmt(cen3P)+'/mês' : '—';
+  if(cen3Total)  cen3Total.textContent  = valor > 0 ? snFmt(valor) : '—';
+
+  // ── Cálculo por modalidade ──
+  if(_snMod === 'avista-nf'){
+    const desc = parseFloat(document.getElementById('sn-nf-desc')?.value)||0;
+    const final = valor * (1 - desc/100);
+    const el = document.getElementById('sn-nf-resultado');
+    if(el) el.textContent = valor > 0 ? snFmt(final) : '—';
+    snAtualizarSimAtual({
+      modalidade:'À Vista c/ Nota Fiscal', valor, desconto:desc,
+      final, parcelas:0, entrada:0, juros:0, totalNeg:final, valorParc:0
+    });
+    snLimparTabela();
+  }
+
+  else if(_snMod === 'avista-snf'){
+    const desc = parseFloat(document.getElementById('sn-snf-desc')?.value)||0;
+    const final = valor * (1 - desc/100);
+    const el = document.getElementById('sn-snf-resultado');
+    if(el) el.textContent = valor > 0 ? snFmt(final) : '—';
+    snAtualizarSimAtual({
+      modalidade:'À Vista s/ Nota Fiscal', valor, desconto:desc,
+      final, parcelas:0, entrada:0, juros:0, totalNeg:final, valorParc:0
+    });
+    snLimparTabela();
+  }
+
+  else if(_snMod === 'prazo'){
+    snCalcPrazo(valor);
+  }
+}
+
+function snCalcPrazo(valor){
+  if(!valor || valor <= 0){ snLimparTabela(); return; }
+
+  const entrada    = parseFloat(document.getElementById('sn-entrada')?.value)||0;
+  const nParcelas  = parseInt(document.getElementById('sn-parcelas')?.value)||1;
+  const jurosMensal= snGetTaxaMensal();
+  const jurosModo  = document.getElementById('sn-juros-modo')?.value || 'proporcional';
+  const taxaAno    = parseFloat(document.getElementById('sn-juros-taxa')?.value)||0;
+  const vencEntStr = document.getElementById('sn-venc-entrada')?.value || '';
+  const vencParcStr= document.getElementById('sn-venc-parcela')?.value || new Date().toISOString().slice(0,10);
+
+  const aParcelar  = Math.max(0, valor - entrada);
+
+  let parcelas = [];
+
+  if(jurosMensal > 0 && jurosModo === 'extra'){
+    // Juros extras no final: parcelas normais + parcelas de juros
+    const parcelaNormal = aParcelar / nParcelas;
+    const jurosTotal    = aParcelar * jurosMensal * nParcelas;
+    const nParcelasJuros= Math.ceil(jurosTotal / parcelaNormal);
+    const totalParcelas  = nParcelas + nParcelasJuros;
+
+    for(let i=0;i<nParcelas;i++){
+      parcelas.push({ valor: Math.round(parcelaNormal*100)/100, idx: i, tipo:'Parcela' });
+    }
+    for(let j=0;j<nParcelasJuros;j++){
+      const vlJuros = j < nParcelasJuros-1 ? Math.round(parcelaNormal*100)/100
+        : Math.round((jurosTotal - parcelaNormal*(nParcelasJuros-1))*100)/100;
+      parcelas.push({ valor: vlJuros, idx: nParcelas+j, tipo:'Juros' });
+    }
+
+  } else {
+    // Sem juros ou juros distribuídos (Price)
+    let valorParc;
+    if(jurosMensal > 0){
+      valorParc = aParcelar * (jurosMensal * Math.pow(1+jurosMensal,nParcelas)) / (Math.pow(1+jurosMensal,nParcelas)-1);
+    } else {
+      valorParc = aParcelar / nParcelas;
+    }
+    valorParc = Math.round(valorParc*100)/100;
+
+    for(let i=0;i<nParcelas;i++){
+      const v = i===nParcelas-1 && jurosMensal===0
+        ? Math.round((aParcelar - valorParc*(nParcelas-1))*100)/100
+        : valorParc;
+      parcelas.push({ valor: v, idx: i, tipo:'Parcela' });
+    }
+  }
+
+  const totalParcelas = parcelas.reduce((s,p)=>s+p.valor,0);
+  const totalGeral    = entrada + totalParcelas;
+
+  // Resumo tabela info
+  const infoEl = document.getElementById('sn-table-info');
+  if(infoEl) infoEl.textContent = `${parcelas.length}x · Total: ${snFmt(totalGeral)}`;
+
+  // Simluação Atual
+  const valorParc1 = parcelas[0]?.valor||0;
+  snAtualizarSimAtual({
+    modalidade:'A Prazo', valor, desconto:0,
+    final: totalGeral, parcelas: parcelas.length, entrada,
+    juros: taxaAno, totalNeg: totalGeral, valorParc: valorParc1
+  });
+
+  // Tabela
+  const tbody = document.getElementById('sn-tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+
+  // Linha de entrada
+  if(entrada > 0){
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    tr.style.background   = 'rgba(22,101,52,.04)';
+    tr.innerHTML = `
+      <td style="padding:9px 14px;color:var(--text2)">—</td>
+      <td style="padding:9px 14px">${vencEntStr ? snFmtDate(vencEntStr) : '—'}</td>
+      <td style="padding:9px 14px;text-align:right;color:#166534;font-weight:700">${snFmt(entrada)}</td>
+      <td style="padding:9px 14px;font-size:11px"><span style="background:#d1fae5;color:#166534;padding:2px 8px;border-radius:4px;font-weight:700">Entrada</span></td>`;
+    tbody.appendChild(tr);
+  }
+
+  // Linhas de parcelas
+  parcelas.forEach((p, idx) => {
+    const venc = snAddMes(vencParcStr, p.idx);
+    const isLast = idx === parcelas.length-1;
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    if(isLast) tr.style.fontWeight = '600';
+    const isJuros = p.tipo === 'Juros';
+    const badgeCor = isJuros ? 'background:#fef3c7;color:#92400e' : 'background:var(--surface2);color:var(--text2)';
+    tr.innerHTML = `
+      <td style="padding:9px 14px;color:var(--text2)">${p.idx+1}</td>
+      <td style="padding:9px 14px">${snFmtDate(venc)}</td>
+      <td style="padding:9px 14px;text-align:right;color:var(--vinho);font-weight:600">${snFmt(p.valor)}</td>
+      <td style="padding:9px 14px;font-size:11px"><span style="padding:2px 8px;border-radius:4px;font-weight:700;${badgeCor}">${p.tipo}</span></td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Linha de total
+  const tfoot = document.createElement('tr');
+  tfoot.style.cssText = 'background:var(--surface2);border-top:2px solid var(--border);font-weight:700';
+  tfoot.innerHTML = `
+    <td colspan="2" style="padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">
+      ${entrada>0?`Entrada ${snFmt(entrada)} + `:''}${parcelas.length} parcela${parcelas.length!==1?'s':''}
+    </td>
+    <td style="padding:10px 14px;text-align:right;color:var(--green);font-size:14px">${snFmt(totalGeral)}</td>
+    <td></td>`;
+  tbody.appendChild(tfoot);
+}
+
+function snAtualizarSimAtual(info){
+  const el = document.getElementById('sn-cen4-resumo');
+  if(!el) return;
+  if(!info.valor || info.valor <= 0){
+    el.innerHTML = '<span style="color:var(--text2)">Preencha os dados</span>';
+    return;
+  }
+  const linhas = [
+    ['Modalidade', info.modalidade],
+    ['Valor tratamento', snFmt(info.valor)],
+  ];
+  if(info.desconto > 0) linhas.push(['Desconto', info.desconto.toFixed(1)+'%']);
+  if(info.entrada > 0)  linhas.push(['Entrada', snFmt(info.entrada)]);
+  if(info.parcelas > 0) linhas.push(['Parcelas', info.parcelas+'x de '+snFmt(info.valorParc)]);
+  if(info.juros > 0)    linhas.push(['Juros', info.juros+'% a.a.']);
+  linhas.push(['Total negociado', snFmt(info.totalNeg)]);
+
+  el.innerHTML = linhas.map(([k,v],i) => {
+    const isTotal = i === linhas.length-1;
+    return `<div style="display:flex;justify-content:space-between;gap:6px;padding:2px 0${isTotal?';border-top:1px solid rgba(139,45,66,.2);margin-top:4px;padding-top:6px':''}">
+      <span style="color:var(--text2);font-size:10px">${k}</span>
+      <span style="font-weight:${isTotal?'800':'600'};font-size:${isTotal?'13':'11'}px;color:${isTotal?'var(--vinho)':'var(--text)'}">${v}</span>
+    </div>`;
+  }).join('');
+}
+
+function snLimparTabela(){
+  const tbody = document.getElementById('sn-tbody');
+  if(tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text2);font-size:13px">Modalidade à vista — sem parcelas</td></tr>';
+  const info = document.getElementById('sn-table-info');
+  if(info) info.textContent = '';
+}
+
+function snLimpar(){
+  ['sn-nome','sn-valor'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const nfD=document.getElementById('sn-nf-desc'); if(nfD) nfD.value='10';
+  const snfD=document.getElementById('sn-snf-desc'); if(snfD) snfD.value='15';
+  const ent=document.getElementById('sn-entrada'); if(ent) ent.value='0';
+  const parc=document.getElementById('sn-parcelas'); if(parc) parc.value='6';
+  const taxa=document.getElementById('sn-juros-taxa'); if(taxa) taxa.value='5';
+  const jAtivo=document.getElementById('sn-juros-ativo'); if(jAtivo) jAtivo.checked=false;
+  ['sn-venc-entrada','sn-venc-parcela'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  snSetMod('avista-nf');
+  snCalc();
+}
+
+// Inicializa datas padrão ao entrar na aba
+(function(){
+  const _prev2 = window.switchTab;
+  window.switchTab = function(name){
+    _prev2(name);
+    if(name==='vendas'){
+      const hoje = new Date().toISOString().slice(0,10);
+      const veP = document.getElementById('sn-venc-parcela');
+      if(veP && !veP.value) veP.value = hoje;
+      const veE = document.getElementById('sn-venc-entrada');
+      if(veE && !veE.value) veE.value = hoje;
+      snCalc();
+    }
+  };
+})();
 </script>
 </body>
 </html>
