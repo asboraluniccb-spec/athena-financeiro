@@ -7048,7 +7048,14 @@ function adpRender(){
 
 function adpRenderAddWrap(){
   const podeAdd    = ADP_USUARIOS_ADD.includes(aprovUsuario);
-  const podeAprovar= aprovUsuario === ADP_USUARIO_APROV;
+  const eAprovador = aprovUsuario === ADP_USUARIO_APROV;
+
+  // Aprovador (Dra. Mone) não vê o formulário de entrada — só os cards
+  const formWrap = document.getElementById('adp-form-wrap');
+  if(formWrap) formWrap.style.display = eAprovador ? 'none' : '';
+
+  if(eAprovador) return; // resto só importa para quem pode adicionar
+
   const fields     = document.getElementById('adp-fields-wrap');
   const saveBtns   = document.getElementById('adp-save-btns');
   const btnAprovar = document.getElementById('adp-btn-aprovar');
@@ -7059,9 +7066,8 @@ function adpRenderAddWrap(){
   const fileInput  = document.getElementById('adp-file-input');
 
   if(fields){ fields.style.opacity = podeAdd ? '1' : '.45'; fields.style.pointerEvents = podeAdd ? '' : 'none'; }
-  // Mostra área de salvar só para quem pode adicionar; botão de aprovar só para Dra. Mone
   if(saveBtns) saveBtns.style.display = podeAdd ? 'flex' : 'none';
-  if(btnAprovar) btnAprovar.style.display = podeAprovar ? '' : 'none';
+  if(btnAprovar) btnAprovar.style.display = 'none'; // botão do form nunca para aprovador
   if(permMsg) permMsg.style.display = podeAdd ? 'none' : '';
   if(dropZone){ dropZone.style.opacity = podeAdd ? '1' : '.45'; dropZone.style.pointerEvents = podeAdd ? '' : 'none'; }
   if(fileInput) fileInput.disabled = !podeAdd;
