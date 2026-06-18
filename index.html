@@ -7611,10 +7611,28 @@ function adpAbrirConfig(){
 function adpNormValor(v){
   if(!v) return '';
   let s = String(v).replace(/R\$\s*/gi,'').replace(/\s/g,'').trim();
-  // 1.234,56 → 1234,56
-  if(/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(s)) s = s.replace(/\./g,'');
-  // 1234.56 → 1234,56
-  else if(/^\d+\.\d{1,2}$/.test(s)) s = s.replace('.',',');
+  if(!s) return '';
+  // Normaliza para padrão BR (vírgula decimal) para armazenamento e exibição
+  const hasDot   = s.includes('.');
+  const hasComma = s.includes(',');
+  if(hasDot && hasComma){
+    const lastDot   = s.lastIndexOf('.');
+    const lastComma = s.lastIndexOf(',');
+    if(lastComma > lastDot){
+      // BR: 1.234,56 — remove pontos de milhar, já está no formato correto
+      s = s.replace(/\./g,'');
+    } else {
+      // EN: 1,234.56 — remove vírgulas de milhar, troca ponto por vírgula
+      s = s.replace(/,/g,'').replace('.',',');
+    }
+  } else if(hasDot && !hasComma){
+    // Apenas ponto: se 2 casas no fim → decimal EN → converte para BR
+    const afterDot = s.split('.').pop() || '';
+    if(afterDot.length <= 2) s = s.replace('.',',');
+    // Caso contrário é milhar sem decimal — mantém como número inteiro
+    else s = s.replace(/\./g,'');
+  }
+  // Apenas vírgula: já está em formato BR, nada a fazer
   return s;
 }
 
@@ -7959,19 +7977,38 @@ function v2Fmt(v){
 }
 function v2ParseVal(v){
   if(v === null || v === undefined || v === '') return 0;
-  // Número nativo JS — pode vir como float já convertido pelo SheetJS (raw:true)
-  // Nunca multiplicar/dividir: retorna diretamente
   if(typeof v === 'number') return v;
   let s = String(v).trim();
-  // Remove R$, espaços e caracteres de moeda
   s = s.replace(/R\$\s*/gi, '').replace(/\s/g, '');
-  // Padrão BR: 1.234,56 ou 1.234.567,89
-  // Se tem vírgula → vírgula é decimal, pontos são milhar
-  if(s.includes(',')) {
-    s = s.replace(/\./g, '').replace(',', '.');
+  if(!s) return 0;
+
+  const hasDot   = s.includes('.');
+  const hasComma = s.includes(',');
+
+  if(hasComma && hasDot){
+    // Determina qual é separador decimal pelo último separador
+    const lastDot   = s.lastIndexOf('.');
+    const lastComma = s.lastIndexOf(',');
+    if(lastComma > lastDot){
+      // Padrão BR: 1.234,56 — ponto=milhar, vírgula=decimal
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // Padrão EN: 1,234.56 — vírgula=milhar, ponto=decimal
+      s = s.replace(/,/g, '');
+    }
+  } else if(hasComma && !hasDot){
+    // Somente vírgula: pode ser 1.234 sem decimal ou 150,75 com decimal
+    // Se a parte após vírgula tem exatamente 2 ou 3 dígitos → vírgula decimal
+    const afterComma = s.split(',')[1] || '';
+    if(afterComma.length <= 2) {
+      s = s.replace(',', '.');
+    } else {
+      // Vírgula como milhar (ex: "1,000") — remove
+      s = s.replace(/,/g, '');
+    }
   }
-  // Se não tem vírgula mas tem ponto com exatamente 2 casas no fim → decimal (ex: 150.75)
-  // Se ponto separa milhar (ex: 49371 sem decimal) → mantém
+  // Se só ponto: ponto decimal padrão JS (ex: "150.75") — mantém como está
+
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }
@@ -8209,14 +8246,19 @@ function v2RenderCards(){
       </div>`;
     }).join('');
 
-    const tfoot = `<div style="display:grid;grid-template-columns:${grid};gap:8px;padding:8px 0 0;border-top:2px solid var(--border)">
-      <div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">TOTAL DAS DESPESAS</div>
-      <div style="font-size:14px;font-weight:800;color:var(--vinho);text-align:right">${v2Fmt(total)}</div>
-      <div></div>
+    const tfoot = `<div style="margin-top:8px;background:linear-gradient(135deg,#f8f0f3,#fdf9f4);border:2px solid var(--vinho);border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2)">Total das Despesas</div>
+      <div style="font-size:22px;font-weight:800;color:var(--vinho);letter-spacing:-.5px">${v2Fmt(total)}</div>
     </div>`;
 
-    const saldoLine = d.saldo
-      ? `<div style="font-size:11px;color:#166534;font-weight:600;margin-top:4px">💰 Saldo do dia: ${v2Fmt(d.saldo)}</div>` : '';
+    const saldoBlock = d.saldo
+      ? `<div style="background:linear-gradient(135deg,#f0fdf4,#e8f9ee);border:2px solid #166534;border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#166534;margin-bottom:2px">💰 Saldo do Dia</div>
+            <div style="font-size:22px;font-weight:800;color:#166534;letter-spacing:-.5px">${v2Fmt(d.saldo)}</div>
+          </div>
+          <div style="font-size:28px;opacity:.3">🏦</div>
+        </div>` : '';
 
     const aprvBtn = eAprovador ? `
       <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
@@ -8230,13 +8272,13 @@ function v2RenderCards(){
 
     return `<div class="adp-day-card" id="v2-card-${dia}" data-v2-dia="${dia}" style="margin-bottom:12px">
       <div class="adp-day-header">
-        <div>
-          <div class="adp-day-date">📅 Despesas (${v2FmtDate(dia)})</div>
-          ${saldoLine}
-        </div>
+        <div class="adp-day-date">📅 Despesas (${v2FmtDate(dia)})</div>
         <div style="display:flex;align-items:center;gap:8px">${excBtn}</div>
       </div>
-      <div class="adp-day-body">${thead}${tbody}${tfoot}</div>
+      <div class="adp-day-body">
+        ${saldoBlock}
+        ${thead}${tbody}${tfoot}
+      </div>
       ${aprvBtn}
     </div>`;
   }).join('');
@@ -8258,14 +8300,14 @@ function v2ToggleCard(dia){
     return `<div style="display:grid;grid-template-columns:${grid};gap:8px;padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-size:12px;color:var(--text);word-break:break-word">${dep.desc||'—'}${catLine}</div><div style="font-size:12px;font-weight:700;color:var(--vinho);text-align:right">${v2Fmt(dep.valor)}</div><div style="font-size:11px;color:var(--gray)">${dep.metodo||'—'}</div></div>`;
   }).join('');
   const thead=`<div style="display:grid;grid-template-columns:${grid};gap:8px;padding:6px 0;border-bottom:2px solid var(--border)"><span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text2)">Descrição</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text2);text-align:right">Valor</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text2)">Método</span></div>`;
-  const tfoot=`<div style="display:grid;grid-template-columns:${grid};gap:8px;padding:8px 0 0;border-top:2px solid var(--border)"><div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">TOTAL DAS DESPESAS</div><div style="font-size:14px;font-weight:800;color:var(--vinho);text-align:right">${v2Fmt(total)}</div><div></div></div>`;
-  const saldoLine=d.saldo?`<div style="font-size:11px;color:#166534;font-weight:600;margin-top:4px">💰 Saldo: ${v2Fmt(d.saldo)}</div>`:'';
+  const tfoot=`<div style="margin-top:8px;background:linear-gradient(135deg,#f8f0f3,#fdf9f4);border:2px solid var(--vinho);border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2)">Total das Despesas</div><div style="font-size:22px;font-weight:800;color:var(--vinho);letter-spacing:-.5px">${v2Fmt(total)}</div></div>`;
+  const saldoBlock=d.saldo?`<div style="background:linear-gradient(135deg,#f0fdf4,#e8f9ee);border:2px solid #166534;border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#166534;margin-bottom:2px">💰 Saldo do Dia</div><div style="font-size:22px;font-weight:800;color:#166534;letter-spacing:-.5px">${v2Fmt(d.saldo)}</div></div><div style="font-size:28px;opacity:.3">🏦</div></div>`:'';
   el.outerHTML=`<div class="adp-day-card" id="v2-card-${dia}" data-v2-dia="${dia}" style="margin-bottom:12px">
     <div class="adp-day-header">
-      <div><div class="adp-day-date">📅 Despesas (${v2FmtDate(dia)})</div>${saldoLine}</div>
+      <div class="adp-day-date">📅 Despesas (${v2FmtDate(dia)})</div>
       <span style="font-size:11px;color:var(--text2);cursor:pointer" onclick="v2RenderCards()">▲ recolher</span>
     </div>
-    <div class="adp-day-body">${thead}${rows}${tfoot}</div>
+    <div class="adp-day-body">${saldoBlock}${thead}${rows}${tfoot}</div>
     <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
       <span class="adp-approved-tag">✅ Aprovado por ${d.aprovadoPor} em ${v2FmtDate(d.aprovadoEm?.split('T')[0])}</span>
     </div>
