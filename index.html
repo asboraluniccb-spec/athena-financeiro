@@ -7249,8 +7249,32 @@ function adpToggleCard(dia){
 }
 
 function adpAprovarDia(dia){
-  if(aprovUsuario !== ADP_USUARIO_APROV) return;
-  if(!confirm(`Confirmar aprovação das despesas de ${adpFmtData(dia)}?`)) return;
+  if(aprovUsuario !== ADP_USUARIO_APROV){
+    adpSetStatus('Somente Dra. Mone pode aprovar.', false);
+    return;
+  }
+  if(!adpData[dia]) return;
+  // Mostra confirmação inline no próprio card em vez de confirm()
+  const card = document.getElementById('adp-card-'+dia);
+  if(card){
+    const existing = card.querySelector('.adp-confirm-bar');
+    if(existing){ existing.remove(); return; }
+    const bar = document.createElement('div');
+    bar.className = 'adp-confirm-bar';
+    bar.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:10px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0';
+    bar.innerHTML = `
+      <span style="font-size:12px;color:#166534;font-weight:600">Confirmar aprovação das despesas de ${adpFmtData(dia)}?</span>
+      <button onclick="adpExecutarAprovacao('${dia}')" style="padding:7px 18px;background:#166534;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body)">✅ Sim, aprovar</button>
+      <button onclick="this.closest('.adp-confirm-bar').remove()" style="padding:7px 14px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer;font-family:var(--font-body)">Cancelar</button>`;
+    card.appendChild(bar);
+    return;
+  }
+  // Fallback se card não encontrado
+  adpExecutarAprovacao(dia);
+}
+
+function adpExecutarAprovacao(dia){
+  if(!adpData[dia]) return;
   adpData[dia].aprovadoPor = aprovUsuario;
   adpData[dia].aprovadoEm  = new Date().toISOString();
   adpSalvar();
