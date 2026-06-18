@@ -7918,13 +7918,27 @@ function v2Salvar_db(){ localStorage.setItem('v2Data', JSON.stringify(v2Data_));
 
 // ── Formatadores ──
 function v2Fmt(v){
-  const n = parseFloat(String(v||0).replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+  // Aceita número ou string — sempre formata como R$ com padrão BR
+  const n = (typeof v === 'number') ? v : v2ParseVal(v);
   return 'R$ ' + n.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 }
 function v2ParseVal(v){
   if(v === null || v === undefined || v === '') return 0;
+  // Número nativo JS — pode vir como float já convertido pelo SheetJS (raw:true)
+  // Nunca multiplicar/dividir: retorna diretamente
   if(typeof v === 'number') return v;
-  return parseFloat(String(v).replace(/[R$\s]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.')) || 0;
+  let s = String(v).trim();
+  // Remove R$, espaços e caracteres de moeda
+  s = s.replace(/R\$\s*/gi, '').replace(/\s/g, '');
+  // Padrão BR: 1.234,56 ou 1.234.567,89
+  // Se tem vírgula → vírgula é decimal, pontos são milhar
+  if(s.includes(',')) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  }
+  // Se não tem vírgula mas tem ponto com exatamente 2 casas no fim → decimal (ex: 150.75)
+  // Se ponto separa milhar (ex: 49371 sem decimal) → mantém
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
 }
 function v2FmtDate(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
 function v2FmtMes(ym){ const [y,m]=ym.split('-'); const n=['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return `${n[+m]} ${y}`; }
@@ -8323,20 +8337,31 @@ function v2ExtrairExcel(rows){
     const col0 = cells[0] || '';
     const col1 = cells[1] || '';
 
-    // Linha de saldo — extrai valor e descarta
+    // Linha de saldo — extrai valor exclusivamente desta linha e descarta
     if(isSaldo(col0) || isSaldo(col1)){
-      const txt = isSaldo(col0) ? col0 : col1;
-      // Tenta pegar valor da mesma célula (ex: "SALDO HOJE: R$100.000,00")
-      let m = txt.match(/R\$\s*([\d.,]+)/i);
-      if(!m){
-        // Tenta pegar de outra coluna numérica da mesma linha
-        for(let ci=0; ci<cells.length; ci++){
-          const n = v2ParseVal(cells[ci]);
-          if(n > 0){ m = [null, cells[ci]]; break; }
+      if(!saldoAchado){
+        // Estratégia 1: valor embutido na mesma célula "SALDO HOJE: R$100.000,00"
+        const txt = isSaldo(col0) ? col0 : col1;
+        let valStr = null;
+        const mInline = txt.match(/R\$\s*([\d.,]+)/i);
+        if(mInline) valStr = mInline[1];
+
+        // Estratégia 2: procura célula numérica na linha (ignora células de texto)
+        if(!valStr){
+          for(let ci=0; ci<cells.length; ci++){
+            const c = cells[ci];
+            // Só considera células que parecem valor monetário
+            if(!c || isSaldo(c) || isTotal(c)) continue;
+            const cleaned = c.replace(/R\$\s*/gi,'').replace(/\s/g,'');
+            // Deve ter pelo menos um dígito e possivelmente vírgula decimal
+            if(/^\d[\d.,]*$/.test(cleaned)){
+              valStr = cleaned; break;
+            }
+          }
         }
+        if(valStr) saldoAchado = valStr;
       }
-      if(m && !saldoAchado) saldoAchado = cells[CV] || m[1];
-      continue;
+      continue; // nunca entra na tabela de despesas
     }
 
     // Linha de total — descarta
@@ -8358,15 +8383,27 @@ function v2ExtrairExcel(rows){
 
   if(novas.length === 0){ v2SetStatus(`Nenhuma despesa encontrada. (colunas: ${rawH.join(', ')})`, 'err'); return; }
 
-  // Preenche saldo
-  if(saldoAchado){
-    const sEl = document.getElementById('v2-saldo');
-    if(sEl) sEl.value = saldoAchado;
+  // Preenche saldo — SOMENTE o valor da linha de saldo, nunca o total de despesas
+  const sEl = document.getElementById('v2-saldo');
+  if(sEl){
+    sEl.value = saldoAchado || '';
+    if(!saldoAchado) sEl.placeholder = 'Não encontrado na planilha';
   }
 
   v2LinhasTemp = novas;
   v2RenderLinhas();
-  v2SetStatus(`${novas.length} despesa${novas.length!==1?'s':''} importada${novas.length!==1?'s':''}.`, 'ok');
+
+  // Validação pós-importação
+  const totalImportado = novas.reduce((s,l) => s + v2ParseVal(l.valor), 0);
+  const nDesp = novas.length;
+  const linhasLog = [
+    `📊 ${nDesp} despesa${nDesp!==1?'s':''} importada${nDesp!==1?'s':''}`,
+    `💳 Total das despesas: ${v2Fmt(totalImportado)}`,
+    saldoAchado ? `💰 Saldo do dia: ${v2Fmt(v2ParseVal(saldoAchado))}` : '⚠ Saldo do dia: não encontrado na planilha',
+  ];
+  v2SetStatus(linhasLog.join('  ·  '), 'ok');
+  // Log detalhado no console para diagnóstico
+  console.log('[V2 Import]', { despesas: nDesp, totalDespesas: totalImportado, saldo: saldoAchado, linhas: novas });
 }
 
 function v2BrevDesc(s){
