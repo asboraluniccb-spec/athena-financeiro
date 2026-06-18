@@ -549,6 +549,7 @@
   .adp-upload-zone-text strong { color:var(--vinho); }
   .adp-notif-banner { position:fixed; top:18px; right:18px; z-index:9999; background:var(--vinho); color:var(--marfim); border-radius:14px; padding:14px 20px; max-width:340px; box-shadow:0 8px 32px rgba(0,0,0,.35); display:flex; align-items:flex-start; gap:12px; animation:adp-slide-in .35s cubic-bezier(.22,.61,.36,1); }
   @keyframes adp-slide-in { from{transform:translateX(120%);opacity:0} to{transform:none;opacity:1} }
+  @keyframes v2pulse { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.4)} 50%{box-shadow:0 0 0 8px rgba(220,38,38,0)} }
   .adp-notif-icon { font-size:22px; flex-shrink:0; }
   .adp-notif-body { flex:1; }
   .adp-notif-title { font-size:13px; font-weight:800; margin-bottom:3px; }
@@ -1484,12 +1485,46 @@
     <div id="v2-main" style="display:none">
 
       <!-- Cabeçalho com usuário + sair -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
         <div style="font-size:13px;font-weight:700;color:var(--text)">
           Aprovação de Despesas
           <span style="font-size:11px;font-weight:400;color:var(--text2);margin-left:8px">Logado como: <strong id="v2-usuario-tag"></strong></span>
         </div>
-        <button onclick="v2Sair()" style="font-size:11px;color:var(--text2);background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-family:var(--font-body)">Sair</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="v2NotifToggleHistorico()" id="v2-notif-hist-btn"
+            style="display:none;font-size:11px;color:var(--text2);background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-family:var(--font-body)">
+            🔔 Histórico
+          </button>
+          <button onclick="v2Sair()" style="font-size:11px;color:var(--text2);background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-family:var(--font-body)">Sair</button>
+        </div>
+      </div>
+
+      <!-- Banner de alertas pendentes (alta prioridade) -->
+      <div id="v2-alert-banner" style="display:none;margin-bottom:14px;border-radius:10px;overflow:hidden;border:2px solid #dc2626;animation:v2pulse 2s infinite">
+        <div style="background:#dc2626;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:20px">🔴</span>
+            <div>
+              <div style="font-size:13px;font-weight:800;letter-spacing:.02em" id="v2-alert-titulo">Despesas pendentes de aprovação</div>
+              <div style="font-size:11px;opacity:.9;margin-top:2px" id="v2-alert-detalhe"></div>
+            </div>
+          </div>
+          <button onclick="v2AlertDismiss()" id="v2-alert-dismiss"
+            style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font-body)">
+            ✓ Ciente
+          </button>
+        </div>
+      </div>
+
+      <!-- Painel histórico de notificações (colapsável) -->
+      <div id="v2-notif-historico" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)">🔔 Histórico de Notificações</div>
+          <button onclick="v2NotifLimparHistorico()" style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;font-family:var(--font-body)">Limpar histórico</button>
+        </div>
+        <div id="v2-notif-lista" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:12px;color:var(--text2);text-align:center;padding:16px">Nenhuma notificação registrada</div>
+        </div>
       </div>
 
       <!-- KPIs -->
@@ -7987,6 +8022,13 @@ function v2Init(){
   v2RenderKpis();
   v2RenderLinhas();
   v2RenderCards();
+  // Notificações: renderiza banner e mostra botão histórico se houver registros
+  v2RenderAlertBanner();
+  const notifs = v2NotifLoad();
+  const btn = document.getElementById('v2-notif-hist-btn');
+  if(btn) btn.style.display = notifs.length > 0 ? '' : 'none';
+  // Reinicia timer de renotificação para Dra. Mone se houver pendentes
+  if(v2Usuario === V2_PODE_APROVAR && v2NotifPendentes().count > 0) v2NotifIniciarTimer();
 }
 
 function v2LinhaVazia(){ return {cat:'', desc:'', valor:'', metodo:''}; }
@@ -8104,6 +8146,13 @@ function v2Salvar(){
   v2RenderCards();
   v2RenderKpis();
   v2SetStatus('✅ Movimentação salva.', 'ok');
+  // Notifica Dra. Mone sobre nova despesa pendente
+  const totalDesp = despesas.reduce((s,i)=>s+v2ParseVal(i.valor),0);
+  v2NotifRegistrar('nova_despesa',
+    `📋 ${v2Usuario} adicionou despesas em ${v2FmtDate(data)} — Total: ${v2Fmt(totalDesp)} — Aguardando aprovação.`,
+    V2_PODE_APROVAR);
+  v2RenderAlertBanner();
+  v2NotifIniciarTimer();
 }
 function v2SetStatus(msg, tipo){
   const el = document.getElementById('v2-status');
@@ -8250,8 +8299,145 @@ function v2ExecutarAprovacao(dia){
   v2Data_[dia].aprovadoPor = v2Usuario;
   v2Data_[dia].aprovadoEm  = new Date().toISOString();
   v2Salvar_db();
+  v2NotifRegistrar('aprovacao', `Despesas de ${v2FmtDate(dia)} aprovadas por ${v2Usuario}`, v2Usuario);
+  v2NotifAposAprovacao(dia);
+  v2RenderAlertBanner();
   v2RenderCards();
   v2RenderKpis();
+}
+
+// ── Sistema de Notificações V2 ────────────────────────────────────────────────
+
+const V2_NOTIF_KEY = 'v2Notificacoes';
+let _v2NotifTimer = null;
+
+function v2NotifLoad(){
+  try{ return JSON.parse(localStorage.getItem(V2_NOTIF_KEY)||'[]'); }catch(e){ return []; }
+}
+function v2NotifSave(arr){
+  localStorage.setItem(V2_NOTIF_KEY, JSON.stringify(arr));
+}
+
+// Registra notificação no histórico
+function v2NotifRegistrar(tipo, msg, usuario){
+  const arr = v2NotifLoad();
+  arr.unshift({ tipo, msg, usuario, ts: new Date().toISOString(), lida: false });
+  if(arr.length > 100) arr.length = 100;
+  v2NotifSave(arr);
+  // Mostra botão histórico
+  const btn = document.getElementById('v2-notif-hist-btn');
+  if(btn) btn.style.display = '';
+}
+
+// Conta dias pendentes de aprovação
+function v2NotifPendentes(){
+  const pendentes = Object.entries(v2Data_).filter(([,d]) => !d.aprovadoPor);
+  const total = pendentes.reduce((s,[,d]) => s + (d.despesas||[]).reduce((a,i) => a+v2ParseVal(i.valor),0), 0);
+  return { count: pendentes.length, total, dias: pendentes.map(([k])=>k) };
+}
+
+// Atualiza/mostra/oculta o banner de alerta vermelho
+function v2RenderAlertBanner(){
+  const banner = document.getElementById('v2-alert-banner');
+  if(!banner) return;
+
+  // Banner só aparece para Dra. Mone quando há pendências
+  const eDraMone = v2Usuario === V2_PODE_APROVAR;
+  const { count, total } = v2NotifPendentes();
+
+  if(!eDraMone || count === 0){
+    banner.style.display = 'none';
+    return;
+  }
+
+  banner.style.display = '';
+  const titulo = document.getElementById('v2-alert-titulo');
+  const detalhe = document.getElementById('v2-alert-detalhe');
+  if(titulo) titulo.textContent = count === 1
+    ? 'Há 1 movimentação pendente de aprovação'
+    : `Há ${count} movimentações pendentes de aprovação`;
+  if(detalhe) detalhe.textContent = `Total em aberto: ${v2Fmt(total)} — clique nos cards abaixo para aprovar`;
+}
+
+// Botão "Ciente" — marca alertas de nova_despesa como lidos
+function v2AlertDismiss(){
+  const arr = v2NotifLoad();
+  arr.forEach(n => { if(n.tipo === 'nova_despesa') n.lida = true; });
+  v2NotifSave(arr);
+  const banner = document.getElementById('v2-alert-banner');
+  if(banner) banner.style.display = 'none';
+}
+
+// Notifica Financeiro quando Dra. Mone aprova
+function v2NotifAposAprovacao(dia){
+  v2NotifRegistrar('aprovacao_financeiro',
+    `✅ Dra. Mone aprovou as despesas de ${v2FmtDate(dia)}. Movimentação confirmada.`,
+    'Financeiro');
+}
+
+// Toggle do painel histórico
+function v2NotifToggleHistorico(){
+  const painel = document.getElementById('v2-notif-historico');
+  if(!painel) return;
+  const aberto = painel.style.display !== 'none';
+  painel.style.display = aberto ? 'none' : '';
+  if(!aberto) v2NotifRenderLista();
+}
+
+// Limpar histórico
+function v2NotifLimparHistorico(){
+  v2NotifSave([]);
+  v2NotifRenderLista();
+  const btn = document.getElementById('v2-notif-hist-btn');
+  if(btn) btn.style.display = 'none';
+}
+
+// Renderiza lista de notificações no painel
+function v2NotifRenderLista(){
+  const lista = document.getElementById('v2-notif-lista');
+  if(!lista) return;
+  const arr = v2NotifLoad();
+  if(arr.length === 0){
+    lista.innerHTML = '<div style="font-size:12px;color:var(--text2);text-align:center;padding:16px">Nenhuma notificação registrada</div>';
+    return;
+  }
+  lista.innerHTML = arr.map(n => {
+    const dt = new Date(n.ts);
+    const hora = dt.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const cor  = n.tipo === 'nova_despesa'   ? '#dc2626'
+               : n.tipo === 'aprovacao'      ? '#166534'
+               : n.tipo === 'aprovacao_financeiro' ? '#1e40af'
+               : '#475569';
+    const icone = n.tipo === 'nova_despesa'  ? '🔴'
+                : n.tipo === 'aprovacao'     ? '✅'
+                : n.tipo === 'aprovacao_financeiro' ? '💼'
+                : '🔔';
+    return `<div style="padding:8px 12px;border-radius:7px;background:var(--creme);border-left:3px solid ${cor};display:flex;gap:10px;align-items:flex-start">
+      <span style="font-size:14px;margin-top:1px">${icone}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;color:var(--text)">${n.msg}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:2px">${hora}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Auto-renotificação a cada 3 horas enquanto houver pendências
+function v2NotifIniciarTimer(){
+  if(_v2NotifTimer) clearInterval(_v2NotifTimer);
+  _v2NotifTimer = setInterval(() => {
+    if(v2Usuario !== V2_PODE_APROVAR) return;
+    const { count } = v2NotifPendentes();
+    if(count > 0){
+      v2NotifRegistrar('nova_despesa',
+        `⏰ Lembrete: ainda há ${count} movimentação(ões) pendentes de aprovação.`,
+        V2_PODE_APROVAR);
+      v2RenderAlertBanner();
+    } else {
+      clearInterval(_v2NotifTimer);
+      _v2NotifTimer = null;
+    }
+  }, 3 * 60 * 60 * 1000); // 3 horas
 }
 
 function v2ExcluirDia(dia){
