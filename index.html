@@ -7128,63 +7128,84 @@ function adpBreviarDesc(desc){
 function adpExtrairDespesasExcel(rows){
   if(!rows || rows.length < 2){ adpSetStatus('Planilha vazia ou sem dados.', false); return; }
 
-  // Localiza linha de cabeçalho (primeira linha não-vazia)
-  let headerRow = -1;
-  for(let i = 0; i < Math.min(8, rows.length); i++){
-    if(rows[i] && rows[i].some(c => c && String(c).trim())) { headerRow = i; break; }
-  }
-  if(headerRow < 0){ adpSetStatus('Não foi possível encontrar o cabeçalho.', false); return; }
-
+  // Normaliza string para comparação
   const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-  const header = rows[headerRow].map(norm);
 
-  // Mapeia colunas pelo cabeçalho normalizado
-  const catIdx   = adpFindCol(header, [/categ/]);
-  const descIdx  = adpFindCol(header, [/descri/,/historico/,/hist\b/,/nome/,/lancamento/,/benefici/,/fornec/]);
-  const dtIdx    = adpFindCol(header, [/venc/,/data/,/dt\b/]);
-  // "Valor de cada despesa" — prioriza "despesa" antes de "valor" genérico
-  const valIdx   = adpFindCol(header, [/valor.*desp/,/desp.*valor/,/valor\b/,/vl\b/,/debito/,/saida/,/amount/]);
-  const metIdx   = adpFindCol(header, [/metodo/,/forma.*pag/,/pag.*forma/,/metodo.*pag/]);
-  const saldoIdx = adpFindCol(header, [/saldo/]);
+  // Localiza a linha de cabeçalho (primeira linha que contenha pelo menos 2 células não-vazias)
+  let headerRow = -1;
+  for(let i = 0; i < Math.min(10, rows.length); i++){
+    const nonEmpty = (rows[i]||[]).filter(c => c && String(c).trim()).length;
+    if(nonEmpty >= 2){ headerRow = i; break; }
+  }
+  if(headerRow < 0){ adpSetStatus('Cabeçalho não encontrado na planilha.', false); return; }
+
+  const rawHeader = rows[headerRow].map(c => String(c||'').trim());
+  const header    = rawHeader.map(norm);
+
+  // Mapeamento por nome EXATO (conforme especificado pelo usuário)
+  // fallback por padrão caso o nome mude levemente
+  function findCol(exactNames, fallbackPatterns){
+    // tenta nome exato primeiro
+    for(const name of exactNames){
+      const idx = header.indexOf(norm(name));
+      if(idx >= 0) return idx;
+    }
+    // fallback por regex
+    return header.findIndex(h => fallbackPatterns.some(p => p.test(h)));
+  }
+
+  const catIdx   = findCol(['categoria'],                          [/categ/]);
+  const descIdx  = findCol(['descricao completa','descricao'],     [/descri/,/historico/,/lancamento/]);
+  const dtIdx    = findCol(['data de vencimento','vencimento'],    [/venc/,/data/]);
+  const valIdx   = findCol(['valor de cada despesa','valor'],      [/valor.*desp/,/desp.*valor/,/valor\b/,/vl\b/]);
+  const metIdx   = findCol(['metodo de pagamento','metodo'],       [/metodo/,/forma.*pag/,/pagamento/]);
+  const saldoIdx = findCol(['saldo do dia','saldo'],               [/saldo/]);
+
+  // Log diagnóstico no console do browser
+  console.log('[ADP] Cabeçalhos encontrados:', rawHeader);
+  console.log('[ADP] Índices → cat:'+catIdx+' desc:'+descIdx+' dt:'+dtIdx+' val:'+valIdx+' met:'+metIdx+' saldo:'+saldoIdx);
 
   const novas = [];
   let saldoEncontrado = null;
 
   for(let i = headerRow + 1; i < rows.length; i++){
     const row = rows[i];
-    if(!row || row.every(c => !String(c||'').trim())) continue;
+    if(!row || row.every(c => !c && c !== 0)) continue;
+    // pula linhas totalmente vazias
+    if(row.every(c => !String(c||'').trim())) continue;
 
-    const rawDesc = descIdx >= 0 ? String(row[descIdx]||'').trim() : String(row[0]||'').trim();
-    const cat     = catIdx  >= 0 ? String(row[catIdx] ||'').trim() : '';
-    const dt      = dtIdx   >= 0 ? String(row[dtIdx]  ||'').trim() : '';
-    const valor   = valIdx  >= 0 ? adpNormValor(row[valIdx]) : '';
-    const metodo  = metIdx  >= 0 ? String(row[metIdx] ||'').trim() : '';
-    const saldoRaw= saldoIdx>= 0 ? String(row[saldoIdx]||'').trim() : '';
+    const rawDesc  = String(row[descIdx >= 0 ? descIdx : 0] || '').trim();
+    const cat      = String(row[catIdx  >= 0 ? catIdx  : (header.length-1)] || '').trim();
+    const dt       = String(row[dtIdx   >= 0 ? dtIdx   : -1] || '').trim();
+    const valorRaw = row[valIdx >= 0 ? valIdx : -1];
+    const valor    = adpNormValor(valorRaw);
+    const metodo   = String(row[metIdx  >= 0 ? metIdx  : -1] || '').trim();
+    const saldoRaw = String(row[saldoIdx>= 0 ? saldoIdx: -1] || '').trim();
 
-    // Captura saldo do dia (primeiro valor não-vazio encontrado)
-    if(saldoRaw && !saldoEncontrado){
+    // Captura saldo do dia (primeiro não-vazio)
+    if(!saldoEncontrado && saldoRaw){
       const sv = adpNormValor(saldoRaw);
       if(sv) saldoEncontrado = sv;
     }
 
-    // Pula linhas sem descrição e sem valor (linhas de saldo puro, totais, etc.)
-    if(!rawDesc && !valor) continue;
-    // Pula linhas cujo conteúdo principal é sobre saldo (não é uma despesa)
-    if(!rawDesc && saldoRaw) continue;
+    // Pula cabeçalhos repetidos ou linhas de total/saldo puro
     if(rawDesc.match(/^(saldo|total|subtotal|descri|categ|metodo|data|venc)/i)) continue;
+    // Pula linha se não tem descrição nem valor
+    if(!rawDesc && !valor) continue;
+    // Pula se parece ser linha de saldo (sem descrição, tem saldo)
+    if(!rawDesc && saldoRaw && !valor) continue;
 
     const desc = adpBreviarDesc(rawDesc);
-    if(!desc && !valor) continue;
-
     novas.push({ cat, desc, dt, valor, metodo });
   }
 
   if(novas.length === 0){
-    adpSetStatus(`Nenhuma despesa encontrada. Colunas: [${header.join(' | ')}]`, false);
+    const debugInfo = rawHeader.map((h,i)=>`[${i}]${h}`).join(' | ');
+    adpSetStatus(`Nenhuma despesa encontrada. Colunas detectadas: ${debugInfo}`, false);
     return;
   }
 
-  // Preenche saldo automaticamente (sobrescreve se já havia)
+  // Preenche saldo automaticamente (sobrescreve sempre com o da planilha)
   const saldoEl = document.getElementById('adp-saldo');
   if(saldoEl && saldoEncontrado) saldoEl.value = saldoEncontrado;
 
