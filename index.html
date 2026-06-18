@@ -6863,23 +6863,41 @@ function adpRenderAddWrap(){
 }
 
 function adpRenderKpis(){
-  const el = document.getElementById('adp-kpis');
-  // Calcula sempre (mesmo com painel oculto) para atualizar quando ficar visível
-  const todos = Object.values(adpData);
-  // Conta apenas dias com despesas reais (exclui dias só com saldo)
-  const diasComDespesas = todos.filter(d => (d.despesas||[]).length > 0);
-  const totalDespesas = diasComDespesas.reduce((s,d) => s + d.despesas.length, 0);
-  const totalValor    = diasComDespesas.reduce((s,d) => s + d.despesas.reduce((ss,i) => ss + adpParseValor(i.valor), 0), 0);
-  const mediaDia      = diasComDespesas.length > 0 ? totalValor / diasComDespesas.length : 0;
-  const mediaPorDespesa = totalDespesas > 0 ? totalValor / totalDespesas : 0;
+  // Lê adpData diretamente do localStorage para garantir dados frescos
+  const dados = JSON.parse(localStorage.getItem('adpData') || '{}');
 
-  // dia com maior movimentação (soma de despesas, não saldo)
+  // Exclui dias que contenham apenas saldo (sem despesas reais)
+  const diasComDespesas = Object.values(dados).filter(d => {
+    const desps = (d.despesas||[]).filter(i => {
+      const c = String(i.cat||i.desc||'').toLowerCase();
+      return !/saldo\s*(hoje|do\s*dia)?/.test(c);
+    });
+    return desps.length > 0;
+  });
+
+  // Recalcula cada dia usando apenas despesas sem saldo
+  const despsLimpas = diasComDespesas.flatMap(d =>
+    (d.despesas||[]).filter(i => {
+      const c = String(i.cat||i.desc||'').toLowerCase();
+      return !/saldo\s*(hoje|do\s*dia)?/.test(c);
+    })
+  );
+
+  const totalDespesas  = despsLimpas.length;
+  const totalValor     = despsLimpas.reduce((s,i) => s + adpParseValor(i.valor), 0);
+  const mediaDia       = diasComDespesas.length > 0 ? totalValor / diasComDespesas.length : 0;
+  const mediaPorDespesa= totalDespesas > 0 ? totalValor / totalDespesas : 0;
+
+  // Dia com maior soma de despesas
   let maiorDia = '', maiorVal = 0;
-  Object.entries(adpData).forEach(([k,d]) => {
-    const v = (d.despesas||[]).reduce((s,i) => s + adpParseValor(i.valor), 0);
+  Object.entries(dados).forEach(([k,d]) => {
+    const v = (d.despesas||[])
+      .filter(i => !/saldo\s*(hoje|do\s*dia)?/.test(String(i.cat||i.desc||'').toLowerCase()))
+      .reduce((s,i) => s + adpParseValor(i.valor), 0);
     if(v > maiorVal){ maiorVal = v; maiorDia = k; }
   });
 
+  const el = document.getElementById('adp-kpis');
   if(!el) return;
   el.innerHTML = `
     <div class="adp-kpi"><div class="adp-kpi-label">Nº de Despesas</div><div class="adp-kpi-value">${totalDespesas}</div><div class="adp-kpi-sub">em ${diasComDespesas.length} dia${diasComDespesas.length!==1?'s':''}</div></div>
@@ -7108,6 +7126,7 @@ function adpHandleDrop(e){
 function adpSetStatus(msg, loading){
   const el = document.getElementById('adp-file-info');
   if(!el) return;
+  if(!msg){ el.innerHTML = ''; return; }
   el.innerHTML = loading
     ? `<span style="color:var(--vinho);font-weight:600">⏳ ${msg}</span>`
     : `<span style="color:#166534;font-weight:600">✅ ${msg}</span>`;
@@ -7129,11 +7148,7 @@ function adpAplicarExtracao(dados){
     }));
     adpRenderLinhasDespesa();
   }
-  const total = dados.despesas ? dados.despesas.length : 0;
-  const soma = dados.despesas
-    ? dados.despesas.reduce((s,d) => s + adpParseValor(d.valor), 0)
-    : 0;
-  adpSetStatus(`${total} despesa${total!==1?'s':''} extraída${total!==1?'s':''}  |  Total: ${adpFmtValor(soma)}`, false);
+  adpSetStatus('', false);
 }
 
 function adpHandleFile(file){
@@ -7330,9 +7345,14 @@ function adpSalvarMovimentacaoAuto(data, saldo, despesas){
     adpSetStatus('Selecione um usuário autorizado para salvar.', false);
     return;
   }
+  // Filtra possível linha de saldo que tenha escapado para o array de despesas
+  const despesasFiltradas = (despesas||[]).filter(d => {
+    const c = String(d.cat||d.desc||'').toLowerCase();
+    return !/saldo\s*(hoje|do\s*dia)?/.test(c);
+  });
   adpData[data] = {
     saldo: saldo || document.getElementById('adp-saldo')?.value || '',
-    despesas,
+    despesas: despesasFiltradas,
     arquivo: adpArquivoTemp || null,
     criadoPor: aprovUsuario,
     adicionadoEm: new Date().toISOString(),
@@ -7343,7 +7363,7 @@ function adpSalvarMovimentacaoAuto(data, saldo, despesas){
   adpArquivoTemp = null;
   adpMesAtivo = data.slice(0,7);
   adpRender();
-  adpSetStatus('', false); // sem mensagem após salvar
+  adpSetStatus('', false);
   adpNotificar(data, 'imediata');
   adpAgendarRenotificacao(data);
 }
