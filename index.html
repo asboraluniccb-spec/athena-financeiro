@@ -8897,6 +8897,17 @@ function cprSair(){
 function cprInit(){
   const tag = document.getElementById('cpr-usuario-tag');
   if(tag) tag.textContent = cprUsuario;
+
+  // Carrinho e Descartes visíveis apenas para usuários autorizados
+  const podeVerTudo = CPR_PODE_APROVAR.includes(cprUsuario);
+  const btnCarrinho  = document.getElementById('cpr-tab-btn-carrinho');
+  const btnDescartes = document.getElementById('cpr-tab-btn-descartes');
+  if(btnCarrinho)  btnCarrinho.style.display  = podeVerTudo ? '' : 'none';
+  if(btnDescartes) btnDescartes.style.display = podeVerTudo ? '' : 'none';
+
+  // Garante que usuário comum começa e fica na aba Solicitar
+  if(!podeVerTudo) cprSwitchSub('solicitar');
+
   cprRenderTodos();
   cprAtualizarBadges();
   cprAtualizarIaStatus();
@@ -8905,15 +8916,19 @@ function cprInit(){
 
 // ── Sub-abas ──
 function cprSwitchSub(id){
+  const podeVerTudo = CPR_PODE_APROVAR.includes(cprUsuario);
+  // Usuário sem permissão só pode acessar solicitar
+  if(!podeVerTudo && id !== 'solicitar') return;
   ['solicitar','carrinho','descartes'].forEach(k=>{
     const panel = document.getElementById('subtab-cpr-'+k);
     const btn   = document.getElementById('cpr-tab-btn-'+k);
-    if(!panel || !btn) return;
+    if(!panel) return;
     const ativo = k===id;
     panel.style.display = ativo ? (k==='solicitar'?'grid':'block') : 'none';
-    btn.style.background    = ativo ? 'var(--vinho)' : 'transparent';
-    btn.style.color         = ativo ? 'var(--marfim)' : 'var(--text2)';
-    btn.style.borderColor   = ativo ? 'var(--vinho)'  : 'var(--border)';
+    if(!btn) return;
+    btn.style.background  = ativo ? 'var(--vinho)' : 'transparent';
+    btn.style.color       = ativo ? 'var(--marfim)' : 'var(--text2)';
+    btn.style.borderColor = ativo ? 'var(--vinho)'  : 'var(--border)';
   });
 }
 
@@ -9277,11 +9292,15 @@ function cprAtualizarBadges(){
   const pend = arr.filter(s=>s.status==='pendente').length;
   const car  = arr.filter(s=>s.status==='carrinho').length;
   const des  = arr.filter(s=>s.status==='descarte').length;
+  const podeVerTudo = CPR_PODE_APROVAR.includes(cprUsuario);
+  // Badge da tab principal: usuários comuns veem só pendentes, aprovadores veem tudo
   const elNav = document.getElementById('badge-compras');
-  if(elNav){ elNav.textContent=pend+car; elNav.style.display=(pend+car)>0?'':'none'; }
+  const totalBadge = podeVerTudo ? pend + car : pend;
+  if(elNav){ elNav.textContent=totalBadge; elNav.style.display=totalBadge>0?'':'none'; }
   const bs = document.getElementById('cpr-badge-solicitar'); if(bs) bs.textContent=pend;
-  const bc = document.getElementById('cpr-badge-carrinho');  if(bc) bc.textContent=car;
-  const bd = document.getElementById('cpr-badge-descartes'); if(bd) bd.textContent=des;
+  // Badges de Carrinho e Descartes só para autorizados
+  const bc = document.getElementById('cpr-badge-carrinho');  if(bc) bc.textContent=podeVerTudo?car:'';
+  const bd = document.getElementById('cpr-badge-descartes'); if(bd) bd.textContent=podeVerTudo?des:'';
 }
 
 // ── Notificações de Compras para o solicitante ──
