@@ -1687,7 +1687,7 @@
 
             <div>
               <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);display:block;margin-bottom:5px">Setor</label>
-              <select id="cpr-setor" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:var(--font-body);background:var(--surface2);color:var(--text)">
+              <select id="cpr-setor" style="width:200px;padding:8px 11px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:var(--font-body);background:var(--surface2);color:var(--text)">
                 <option value="">Selecione...</option>
                 <option>Financeiro</option><option>Relacionamento</option><option>Gerência</option>
                 <option>Recepção</option><option>ASB</option><option>Laboratório</option>
@@ -1697,14 +1697,18 @@
             </div>
 
             <div>
-              <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);display:block;margin-bottom:8px">Urgência</label>
-              <div id="cpr-necessidade-wrap" style="display:flex;flex-wrap:wrap;gap:5px">
-                <label class="cpr-nec-label"><input type="checkbox" value="Baixa" onchange="cprToggleNec(this)"><span>Baixa</span></label>
-                <label class="cpr-nec-label"><input type="checkbox" value="Média" onchange="cprToggleNec(this)"><span>Média</span></label>
-                <label class="cpr-nec-label"><input type="checkbox" value="Alta" onchange="cprToggleNec(this)"><span>Alta</span></label>
-                <label class="cpr-nec-label"><input type="checkbox" value="O mais breve possível" onchange="cprToggleNec(this)"><span>O mais breve possível</span></label>
-                <label class="cpr-nec-label"><input type="checkbox" value="Nos próximos dias" onchange="cprToggleNec(this)"><span>Nos próximos dias</span></label>
-                <label class="cpr-nec-label"><input type="checkbox" value="Quando possível" onchange="cprToggleNec(this)"><span>Quando possível</span></label>
+              <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);display:block;margin-bottom:8px">Nível de necessidade</label>
+              <!-- Grupo 1: intensidade (exclusivo entre si) -->
+              <div style="display:flex;gap:5px;margin-bottom:5px" id="cpr-nec-grupo1">
+                <label class="cpr-nec-label" data-grupo="1"><input type="checkbox" value="Baixa" onchange="cprToggleNec(this)"><span>Baixa</span></label>
+                <label class="cpr-nec-label" data-grupo="1"><input type="checkbox" value="Média" onchange="cprToggleNec(this)"><span>Média</span></label>
+                <label class="cpr-nec-label" data-grupo="1"><input type="checkbox" value="Alta" onchange="cprToggleNec(this)"><span>Alta</span></label>
+              </div>
+              <!-- Grupo 2: prazo (exclusivo entre si) -->
+              <div style="display:flex;gap:5px;flex-wrap:wrap" id="cpr-nec-grupo2">
+                <label class="cpr-nec-label" data-grupo="2"><input type="checkbox" value="O mais breve possível" onchange="cprToggleNec(this)"><span>O mais breve possível</span></label>
+                <label class="cpr-nec-label" data-grupo="2"><input type="checkbox" value="Nos próximos dias" onchange="cprToggleNec(this)"><span>Nos próximos dias</span></label>
+                <label class="cpr-nec-label" data-grupo="2"><input type="checkbox" value="Quando possível" onchange="cprToggleNec(this)"><span>Quando possível</span></label>
               </div>
             </div>
 
@@ -8904,16 +8908,27 @@ function cprSwitchSub(id){
   });
 }
 
-// ── Toggle necessidade (checkbox) ──
+// ── Toggle necessidade — exclusivo por grupo ──
 function cprToggleNec(cb){
-  const v = cb.value;
+  const v   = cb.value;
   const lbl = cb.closest('label');
+  const grupo = lbl.dataset.grupo;
+
   if(cb.checked){
+    // Desmarca todos os outros do mesmo grupo
+    document.querySelectorAll(`#cpr-necessidade-wrap [data-grupo="${grupo}"] input`).forEach(other => {
+      if(other !== cb){
+        other.checked = false;
+        const otherLbl = other.closest('label');
+        otherLbl.classList.remove('ativa','urgente');
+        cprNecessidadesSel = cprNecessidadesSel.filter(x => x !== other.value);
+      }
+    });
     if(!cprNecessidadesSel.includes(v)) cprNecessidadesSel.push(v);
     lbl.classList.add('ativa');
     if(['Alta','O mais breve possível'].includes(v)) lbl.classList.add('urgente');
   } else {
-    cprNecessidadesSel = cprNecessidadesSel.filter(x=>x!==v);
+    cprNecessidadesSel = cprNecessidadesSel.filter(x => x !== v);
     lbl.classList.remove('ativa','urgente');
   }
 }
@@ -8967,7 +8982,7 @@ function cprSolicitar(){
   document.getElementById('cpr-obs').value='';
   cprRemoverImg();
   cprNecessidadesSel=[];
-  document.querySelectorAll('#cpr-necessidade-wrap input[type=checkbox]').forEach(cb=>{
+  document.querySelectorAll('[data-grupo] input[type=checkbox]').forEach(cb=>{
     cb.checked=false;
     cb.closest('label').classList.remove('ativa','urgente');
   });
