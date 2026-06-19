@@ -8251,6 +8251,19 @@ function v2RenderCards(){
       <div style="font-size:22px;font-weight:800;color:var(--vinho);letter-spacing:-.5px">${v2Fmt(total)}</div>
     </div>`;
 
+    const saldoVal = v2ParseVal(d.saldo);
+    const saldoApos = saldoVal > 0 ? saldoVal - total : null;
+    const saldoAposCor = saldoApos !== null ? (saldoApos >= 0 ? '#166534' : '#991b1b') : '#475569';
+    const saldoAposIcone = saldoApos !== null ? (saldoApos >= 0 ? '✅' : '⚠️') : '';
+    const saldoAposBlock = `<div style="margin-top:8px;background:${saldoApos !== null && saldoApos < 0 ? 'linear-gradient(135deg,#fef2f2,#fff5f5)' : 'linear-gradient(135deg,#f0f9ff,#e8f4fd)'};border:2px solid ${saldoAposCor};border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${saldoAposCor};margin-bottom:2px">${saldoAposIcone} Saldo após Despesas</div>
+        <div style="font-size:22px;font-weight:800;color:${saldoAposCor};letter-spacing:-.5px">${saldoApos !== null ? v2Fmt(saldoApos) : '—'}</div>
+        ${saldoApos === null ? '<div style="font-size:10px;color:var(--text2);margin-top:2px">Informe o saldo do dia para calcular</div>' : ''}
+      </div>
+      <div style="font-size:28px;opacity:.3">${saldoApos !== null && saldoApos < 0 ? '📉' : '📊'}</div>
+    </div>`;
+
     const saldoBlock = d.saldo
       ? `<div style="background:linear-gradient(135deg,#f0fdf4,#e8f9ee);border:2px solid #166534;border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
           <div>
@@ -8278,6 +8291,7 @@ function v2RenderCards(){
       <div class="adp-day-body">
         ${saldoBlock}
         ${thead}${tbody}${tfoot}
+        ${saldoAposBlock}
       </div>
       ${aprvBtn}
     </div>`;
@@ -8302,12 +8316,15 @@ function v2ToggleCard(dia){
   const thead=`<div style="display:grid;grid-template-columns:${grid};gap:8px;padding:6px 0;border-bottom:2px solid var(--border)"><span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text2)">Descrição</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text2);text-align:right">Valor</span><span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text2)">Método</span></div>`;
   const tfoot=`<div style="margin-top:8px;background:linear-gradient(135deg,#f8f0f3,#fdf9f4);border:2px solid var(--vinho);border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2)">Total das Despesas</div><div style="font-size:22px;font-weight:800;color:var(--vinho);letter-spacing:-.5px">${v2Fmt(total)}</div></div>`;
   const saldoBlock=d.saldo?`<div style="background:linear-gradient(135deg,#f0fdf4,#e8f9ee);border:2px solid #166534;border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#166534;margin-bottom:2px">💰 Saldo do Dia</div><div style="font-size:22px;font-weight:800;color:#166534;letter-spacing:-.5px">${v2Fmt(d.saldo)}</div></div><div style="font-size:28px;opacity:.3">🏦</div></div>`:'';
+  const _sv2 = v2ParseVal(d.saldo), _sa2 = _sv2 > 0 ? _sv2 - total : null;
+  const _sc2 = _sa2 !== null ? (_sa2 >= 0 ? '#166534' : '#991b1b') : '#475569';
+  const saldoAposBlock2=`<div style="margin-top:8px;background:${_sa2!==null&&_sa2<0?'linear-gradient(135deg,#fef2f2,#fff5f5)':'linear-gradient(135deg,#f0f9ff,#e8f4fd)'};border:2px solid ${_sc2};border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${_sc2};margin-bottom:2px">${_sa2!==null?(_sa2>=0?'✅':'⚠️'):''} Saldo após Despesas</div><div style="font-size:22px;font-weight:800;color:${_sc2};letter-spacing:-.5px">${_sa2!==null?v2Fmt(_sa2):'—'}</div>${_sa2===null?'<div style="font-size:10px;color:var(--text2);margin-top:2px">Informe o saldo do dia para calcular</div>':''}</div><div style="font-size:28px;opacity:.3">${_sa2!==null&&_sa2<0?'📉':'📊'}</div></div>`;
   el.outerHTML=`<div class="adp-day-card" id="v2-card-${dia}" data-v2-dia="${dia}" style="margin-bottom:12px">
     <div class="adp-day-header">
       <div class="adp-day-date">📅 Despesas (${v2FmtDate(dia)})</div>
       <span style="font-size:11px;color:var(--text2);cursor:pointer" onclick="v2RenderCards()">▲ recolher</span>
     </div>
-    <div class="adp-day-body">${saldoBlock}${thead}${rows}${tfoot}</div>
+    <div class="adp-day-body">${saldoBlock}${thead}${rows}${tfoot}${saldoAposBlock2}</div>
     <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
       <span class="adp-approved-tag">✅ Aprovado por ${d.aprovadoPor} em ${v2FmtDate(d.aprovadoEm?.split('T')[0])}</span>
     </div>
