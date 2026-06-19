@@ -9180,7 +9180,9 @@ function cprRowHtml(s){
     }
   } else if(s.status === 'carrinho'){
     if(podeAprovar){
-      botoesAcao = `<button class="cpr-btn cpr-btn-secondary" onclick="cprMover(${s.id},'pendente')">↩ Devolver</button>`;
+      botoesAcao = `
+        <button class="cpr-btn cpr-btn-primary" onclick="cprMarcarComprado(${s.id})" style="background:#166534;border-color:#166534" title="Marcar como comprado e remover">✓ Comprado</button>
+        <button class="cpr-btn cpr-btn-secondary" onclick="cprMover(${s.id},'pendente')">↩ Devolver</button>`;
     }
   } else if(s.status === 'descarte'){
     if(podeAprovar){
@@ -9598,6 +9600,26 @@ Responda SOMENTE com um objeto JSON válido (sem markdown, sem texto fora do JSO
   }
 
   cprRenderTodos();
+}
+
+// ── Marcar como comprado (remove do carrinho) ──
+function cprMarcarComprado(id){
+  if(!CPR_PODE_APROVAR.includes(cprUsuario)){ alert('Sem permissão.'); return; }
+  const idNum = typeof id==='string'?parseInt(id,10):id;
+  const arr = cprLoad();
+  const sol = arr.find(s=>s.id===idNum||String(s.id)===String(id));
+  if(!sol) return;
+  if(!confirm(`Confirmar: "${sol.item}" foi comprado e será removido do carrinho?`)) return;
+  const novo = arr.filter(s=>s.id!==idNum&&String(s.id)!==String(id));
+  cprSave(novo);
+  if(typeof v2NotifRegistrar==='function'){
+    v2NotifRegistrar('cpr_aprovacao',
+      `🛍️ Item "${sol.item}" marcado como comprado por ${cprUsuario}.`,
+      sol.solicitante);
+    cprAtualizarNotifBadge();
+  }
+  cprRenderTodos();
+  cprAtualizarBadges();
 }
 
 // Reinicia análise zerando contagem de retry
