@@ -9029,12 +9029,21 @@ function cprSetStatus(msg, tipo){
 
 // ── Mover card ──
 function cprMover(id, novoStatus){
+  const idNum = typeof id==='string'?parseInt(id,10):id;
   const arr = cprLoad();
-  const sol = arr.find(s=>s.id===id);
+  const sol = arr.find(s=>s.id===idNum||String(s.id)===String(id));
   if(!sol) return;
   sol.status = novoStatus;
   if(novoStatus==='carrinho') sol.adicionadoAoCarrinhoEm=new Date().toISOString();
   if(novoStatus==='descarte') sol.descartadoEm=new Date().toISOString();
+  // Ao devolver para pendente, limpa aprovação/recusa anterior
+  if(novoStatus==='pendente'){
+    delete sol.aprovadoPor; delete sol.aprovadoEm;
+    delete sol.recusadoPor; delete sol.recusadoEm;
+    delete sol.justificativaRecusa;
+    delete sol.adicionadoAoCarrinhoEm;
+    delete sol.descartadoEm;
+  }
   cprSave(arr);
   cprRenderTodos();
   cprAtualizarBadges();
@@ -9042,7 +9051,8 @@ function cprMover(id, novoStatus){
 
 // ── Excluir ──
 function cprExcluir(id){
-  const arr = cprLoad().filter(s=>s.id!==id);
+  const idNum = typeof id==='string'?parseInt(id,10):id;
+  const arr = cprLoad().filter(s=>s.id!==idNum&&String(s.id)!==String(id));
   cprSave(arr);
   cprRenderTodos();
   cprAtualizarBadges();
@@ -9174,7 +9184,8 @@ function cprRowHtml(s){
     if(podeAprovar){
       botoesAcao = `
         <button class="cpr-btn cpr-btn-primary" onclick="cprAprovar(${s.id})" title="Aprovar — mover para Carrinho">✓ Aprovar</button>
-        <button class="cpr-btn cpr-btn-danger"  onclick="cprRecusar(${s.id})"  title="Recusar — mover para Descartes">✕ Recusar</button>`;
+        <button class="cpr-btn cpr-btn-danger"  onclick="cprRecusar(${s.id})"  title="Recusar — mover para Descartes">✕ Recusar</button>
+        <button class="cpr-btn" onclick="cprExcluir(${s.id})" title="Excluir solicitação" style="font-size:11px;background:none;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:4px 9px;cursor:pointer;font-family:var(--font-body)">🗑</button>`;
     } else {
       botoesAcao = `<span style="font-size:11px;color:var(--text2);font-style:italic">Aguardando aprovação</span>`;
     }
@@ -9186,7 +9197,8 @@ function cprRowHtml(s){
     }
   } else if(s.status === 'descarte'){
     if(podeAprovar){
-      botoesAcao = `<button class="cpr-btn cpr-btn-secondary" onclick="cprMover(${s.id},'pendente')">↩ Restaurar</button>
+      botoesAcao = `
+        <button class="cpr-btn cpr-btn-secondary" onclick="cprMover(${s.id},'pendente')">↩ Restaurar</button>
         <button class="cpr-btn cpr-btn-danger" onclick="cprExcluir(${s.id})">Excluir</button>`;
     }
   }
