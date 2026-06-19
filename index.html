@@ -570,6 +570,7 @@
   .cpr-btn-danger { background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
   .cpr-badge-nec { font-size:9px; padding:2px 7px; border-radius:10px; font-weight:700; }
   .cpr-empty { text-align:center; padding:48px 20px; color:var(--text2); font-size:13px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
   .adp-notif-icon { font-size:22px; flex-shrink:0; }
   .adp-notif-body { flex:1; }
   .adp-notif-title { font-size:13px; font-weight:800; margin-bottom:3px; }
@@ -8989,7 +8990,9 @@ function cprSolicitar(){
 
   cprRenderTodos();
   cprAtualizarBadges();
-  cprSetStatus('✅ Solicitação criada com sucesso!','ok');
+  cprSetStatus('✅ Solicitação criada! Analisando com IA...','ok');
+  // Dispara análise IA automaticamente se chave configurada
+  setTimeout(()=>cprAnalisarSeConfigurado(sol.id), 400);
 }
 
 // ── Status ──
@@ -9067,21 +9070,57 @@ function cprRowHtml(s){
     ? `<button class="cpr-btn cpr-btn-secondary" onclick="cprMover(${s.id},'descarte')" title="Descartar">Descartar</button>`
     : `<button class="cpr-btn cpr-btn-danger" onclick="cprExcluir(${s.id})" title="Excluir definitivamente">Excluir</button>`;
 
-  return `<div class="cpr-row">
-    ${imgHtml}
-    <div class="cpr-row-body">
-      <div class="cpr-row-item">${cprEsc(s.item)}</div>
-      <div class="cpr-row-meta">
-        ${s.setor?`<span>🏥 ${cprEsc(s.setor)}</span>`:''}
-        ${necTags?`<span style="display:flex;gap:4px;flex-wrap:wrap">${necTags}</span>`:''}
-        ${s.obs?`<span style="color:var(--text2);font-style:italic;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"${cprEsc(s.obs)}"</span>`:''}
+  // Painel de análise IA
+  const ia = s.iaAnalise;
+  let iaHtml = '';
+  if(ia){
+    const corImpacto = ia.impacto==='alto'?'#991b1b':ia.impacto==='medio'?'#854d0e':'#166534';
+    const bgImpacto  = ia.impacto==='alto'?'#fef2f2':ia.impacto==='medio'?'#fffbeb':'#f0fdf4';
+    const icImpacto  = ia.impacto==='alto'?'⚠️':ia.impacto==='medio'?'🟡':'✅';
+    iaHtml = `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">🤖 Análise IA</span>
+        <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2);border:1px solid var(--border)">📂 ${cprEsc(ia.categoria||'—')}</span>
+        ${ia.valorMedio?`<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe">💰 Mercado: ${cprEsc(ia.valorMedio)}</span>`:''}
+        <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${bgImpacto};color:${corImpacto};border:1px solid ${corImpacto}33">${icImpacto} Impacto: ${ia.impacto||'—'}</span>
       </div>
-      <div style="font-size:10px;color:var(--text2);margin-top:4px">👤 ${cprEsc(s.solicitante)} · 🕐 ${dtFmt}</div>
+      ${ia.resumo?`<div style="font-size:11px;color:var(--text);line-height:1.5;background:var(--surface2);padding:8px 11px;border-radius:7px;margin-bottom:6px">${cprEsc(ia.resumo)}</div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        ${ia.despesaCategoria!==undefined?`<div style="background:var(--surface2);border-radius:7px;padding:7px 10px"><div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Gasto atual categoria</div><div style="font-size:13px;font-weight:700;color:var(--vinho)">${cprEsc(ia.despesaCategoria)}</div></div>`:''}
+        ${ia.faixaMercado?`<div style="background:#eff6ff;border-radius:7px;padding:7px 10px"><div style="font-size:9px;color:#1e40af;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Faixa de mercado</div><div style="font-size:12px;font-weight:700;color:#1e40af">${cprEsc(ia.faixaMercado)}</div></div>`:''}
+        ${ia.confiabilidade?`<div style="background:var(--surface2);border-radius:7px;padding:7px 10px"><div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Confiabilidade</div><div style="font-size:12px;font-weight:700;color:var(--text)">${cprEsc(ia.confiabilidade)}</div></div>`:''}
+      </div>
+      ${ia.alerta?`<div style="margin-top:6px;font-size:11px;color:#991b1b;background:#fef2f2;border:1px solid #fca5a5;border-radius:7px;padding:7px 11px">⚠ ${cprEsc(ia.alerta)}</div>`:''}
+    </div>`;
+  } else if(s.iaStatus==='analisando'){
+    iaHtml = `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;font-size:11px;color:var(--text2);display:flex;align-items:center;gap:8px">
+      <span style="display:inline-block;width:12px;height:12px;border:2px solid var(--vinho);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span>
+      Analisando com IA...
+    </div>`;
+  } else if(!ia && s.status==='pendente'){
+    iaHtml = `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+      <button onclick="cprAnalisarIA(${s.id})" style="font-size:11px;color:var(--vinho);background:none;border:1px solid var(--vinho);border-radius:6px;padding:4px 12px;cursor:pointer;font-family:var(--font-body);font-weight:600">🤖 Analisar com IA</button>
+    </div>`;
+  }
+
+  return `<div class="cpr-row" style="flex-direction:column;align-items:stretch" id="cpr-row-${s.id}">
+    <div style="display:flex;align-items:center;gap:14px">
+      ${imgHtml}
+      <div class="cpr-row-body">
+        <div class="cpr-row-item">${cprEsc(s.item)}</div>
+        <div class="cpr-row-meta">
+          ${s.setor?`<span>🏥 ${cprEsc(s.setor)}</span>`:''}
+          ${necTags?`<span style="display:flex;gap:4px;flex-wrap:wrap">${necTags}</span>`:''}
+          ${s.obs?`<span style="color:var(--text2);font-style:italic;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"${cprEsc(s.obs)}"</span>`:''}
+        </div>
+        <div style="font-size:10px;color:var(--text2);margin-top:4px">👤 ${cprEsc(s.solicitante)} · 🕐 ${dtFmt}</div>
+      </div>
+      <div class="cpr-row-actions">
+        ${btnPrimario}
+        ${btnSecundario}
+      </div>
     </div>
-    <div class="cpr-row-actions">
-      ${btnPrimario}
-      ${btnSecundario}
-    </div>
+    ${iaHtml}
   </div>`;
 }
 
@@ -9121,6 +9160,123 @@ function cprAtualizarBadges(){
 document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); });
 });
+
+// ══════════════════════════════════════════════════════════════════════
+// COMPRAS — ANÁLISE IA
+// ══════════════════════════════════════════════════════════════════════
+
+// Extrai resumo financeiro do localStorage para contexto da IA
+function cprContextoFinanceiro(){
+  try {
+    const v2 = JSON.parse(localStorage.getItem('v2Data') || '{}');
+    const adp = JSON.parse(localStorage.getItem('adpData') || '{}');
+    const todos = [...Object.values(v2), ...Object.values(adp)];
+    // Agrupa despesas por categoria
+    const porCat = {};
+    todos.forEach(d => {
+      (d.despesas||[]).forEach(dep => {
+        const cat = (dep.cat||dep.desc||'Outros').substring(0,40);
+        if(!porCat[cat]) porCat[cat] = 0;
+        const v = typeof dep.valor==='number' ? dep.valor : (() => {
+          let s = String(dep.valor||'').replace(/R\$\s*/gi,'').replace(/\s/g,'');
+          const hasDot=s.includes('.'), hasComma=s.includes(',');
+          if(hasDot&&hasComma){ const ld=s.lastIndexOf('.'), lc=s.lastIndexOf(','); s=lc>ld?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,''); }
+          else if(hasComma&&!hasDot){ s=s.split(',')[1]?.length<=2?s.replace(',','.'):s.replace(/,/g,''); }
+          return parseFloat(s)||0;
+        })();
+        porCat[cat] += v;
+      });
+    });
+    // Top 10 categorias com mais gasto
+    const top = Object.entries(porCat)
+      .sort((a,b)=>b[1]-a[1]).slice(0,10)
+      .map(([cat,val])=>`${cat}: R$ ${val.toFixed(2)}`).join('\n');
+    const totalMes = Object.values(porCat).reduce((s,v)=>s+v,0);
+    return { resumo: top, totalMes: totalMes.toFixed(2), numRegistros: todos.length };
+  } catch(e){ return { resumo:'', totalMes:'0', numRegistros:0 }; }
+}
+
+// Analisa item com Gemini
+async function cprAnalisarIA(id){
+  const arr = cprLoad();
+  const sol = arr.find(s=>s.id===id);
+  if(!sol) return;
+
+  const apiKey = localStorage.getItem('adp_gemini_key') || '';
+  if(!apiKey){
+    alert('Configure a chave da API Gemini nas Configurações (aba Aprovação de Despesas → ⚙) para usar análise com IA.');
+    return;
+  }
+
+  // Marca como analisando e re-renderiza
+  sol.iaStatus = 'analisando';
+  cprSave(arr);
+  cprRenderTodos();
+
+  const ctx = cprContextoFinanceiro();
+
+  const prompt = `Você é um assistente financeiro de uma clínica odontológica chamada Oral Unic.
+Um colaborador fez a seguinte solicitação de compra:
+
+Item: "${sol.item}"
+Setor: "${sol.setor||'Não informado'}"
+Observações: "${sol.obs||'Nenhuma'}"
+Nível de necessidade: "${(sol.necessidade||[]).join(', ')||'Não informado'}"
+
+Contexto financeiro atual da clínica (top categorias de despesas registradas):
+${ctx.resumo||'Sem dados disponíveis'}
+Total de despesas registradas: R$ ${ctx.totalMes} (${ctx.numRegistros} registros)
+
+Sua tarefa — responda SOMENTE em JSON válido, sem markdown, sem explicações fora do JSON:
+
+{
+  "categoria": "categoria financeira mais adequada para esta compra (ex: Material de Escritório, Insumos Odontológicos, Copa e Cozinha, Equipamentos, Manutenção, Royalties, Publicidade, RH, etc.)",
+  "valorMedio": "valor médio estimado de mercado para UMA unidade deste item no Brasil atual (ex: R$ 2,50 ou R$ 1.200,00 a R$ 1.800,00)",
+  "faixaMercado": "faixa de preço no formato 'R$ X a R$ Y'",
+  "confiabilidade": "Alta / Média / Baixa — baseado no quão específico é o item",
+  "impacto": "alto / medio / baixo — baseado no valor estimado vs contexto financeiro da clínica",
+  "despesaCategoria": "valor total já gasto nessa categoria conforme dados fornecidos, ou 'Sem dados' se não houver",
+  "resumo": "análise em 2-3 frases: o que é o item, se o valor está compatível com o mercado, e o impacto financeiro para a clínica considerando o contexto atual",
+  "alerta": "alerta específico se houver risco financeiro, sobrepreço possível, ou se a categoria já está com gastos elevados — deixe vazio se não houver alerta"
+}`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ contents:[{parts:[{text:prompt}]}],
+          generationConfig:{ temperature:0.2, maxOutputTokens:600 } }) }
+    );
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // Extrai JSON da resposta
+    const match = text.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error('Resposta inválida');
+    const analise = JSON.parse(match[0]);
+
+    // Atualiza solicitação
+    const arr2 = cprLoad();
+    const sol2 = arr2.find(s=>s.id===id);
+    if(sol2){
+      sol2.iaAnalise = analise;
+      sol2.iaStatus  = 'concluido';
+      sol2.iaEm      = new Date().toISOString();
+      cprSave(arr2);
+    }
+  } catch(e){
+    const arr2 = cprLoad();
+    const sol2 = arr2.find(s=>s.id===id);
+    if(sol2){ sol2.iaStatus='erro'; sol2.iaErro=String(e); cprSave(arr2); }
+  }
+
+  cprRenderTodos();
+}
+
+// Analisa automaticamente após criar solicitação (se chave configurada)
+function cprAnalisarSeConfigurado(id){
+  if(localStorage.getItem('adp_gemini_key')) cprAnalisarIA(id);
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // SIMULADOR DE NEGOCIAÇÃO (Relacionamento / Vendas)
