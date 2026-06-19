@@ -1417,7 +1417,6 @@
               <div id="adp-perm-msg" style="display:none;font-size:11px;color:var(--text2);background:rgba(139,45,66,.07);border-radius:7px;padding:5px 12px">
                 🔒 Somente <strong>Dra. Mone</strong> ou <strong>Financeiro</strong> podem adicionar
               </div>
-              <button onclick="adpAbrirConfig()" title="Configurar chave Gemini para extração automática de imagens" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font-body)" id="adp-config-btn">⚙ IA</button>
             </div>
           </div>
 
@@ -1666,6 +1665,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:11px;color:var(--text2)"><strong id="cpr-usuario-tag" style="color:var(--text)"></strong></span>
+          <button id="cpr-ia-config-btn" onclick="cprConfigurarChave()" style="font-size:11px;padding:5px 12px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:var(--font-body)">🤖 Configurar IA</button>
           <button onclick="cprSair()" style="font-size:11px;padding:5px 12px;background:none;color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:var(--font-body)">Sair</button>
         </div>
       </div>
@@ -7333,15 +7333,6 @@ function adpRender(){
   }
   // garante ao menos uma linha de despesa
   if(adpDespesasTemp.length === 0){ adpDespesasTemp = [{desc:'',cat:'',metodo:'',dt:'',valor:''}]; adpRenderLinhasDespesa(); }
-  // atualiza indicador de chave Gemini
-  const cfgBtn = document.getElementById('adp-config-btn');
-  if(cfgBtn){
-    const temKey = !!localStorage.getItem('adp_gemini_key');
-    cfgBtn.textContent = temKey ? '⚙ IA ✓' : '⚙ IA';
-    cfgBtn.style.color = temKey ? '#166534' : 'var(--text2)';
-    cfgBtn.style.borderColor = temKey ? '#166534' : 'var(--border)';
-    cfgBtn.title = temKey ? 'Chave Gemini configurada — extração automática de imagens ativa' : 'Configurar chave Gemini para extração automática de imagens';
-  }
 }
 
 function adpRenderAddWrap(){
@@ -7766,11 +7757,7 @@ Regras: liste TODAS as despesas/pagamentos/saídas visíveis. Valores somente co
 }
 
 function adpAbrirConfig(){
-  const atual = localStorage.getItem('adp_gemini_key') || '';
-  const nova = prompt('Cole sua chave da API Google Gemini (fica salva localmente no navegador):\n\nObtente em: aistudio.google.com → Get API Key', atual);
-  if(nova === null) return;
-  localStorage.setItem('adp_gemini_key', nova.trim());
-  alert(nova.trim() ? '✅ Chave salva! Agora imagens serão analisadas automaticamente.' : 'Chave removida.');
+  // Configuração de chave movida para aba Compras
 }
 
 function adpNormValor(v){
@@ -8893,6 +8880,7 @@ function cprInit(){
   if(tag) tag.textContent = cprUsuario;
   cprRenderTodos();
   cprAtualizarBadges();
+  cprAtualizarIaStatus();
 }
 
 // ── Sub-abas ──
@@ -9204,7 +9192,7 @@ async function cprAnalisarIA(id){
 
   const apiKey = localStorage.getItem('adp_gemini_key') || '';
   if(!apiKey){
-    alert('Configure a chave da API Gemini nas Configurações (aba Aprovação de Despesas → ⚙) para usar análise com IA.');
+    cprConfigurarChave();
     return;
   }
 
@@ -9276,6 +9264,27 @@ Sua tarefa — responda SOMENTE em JSON válido, sem markdown, sem explicações
 // Analisa automaticamente após criar solicitação (se chave configurada)
 function cprAnalisarSeConfigurado(id){
   if(localStorage.getItem('adp_gemini_key')) cprAnalisarIA(id);
+}
+
+// Configuração da chave Gemini — direto na aba Compras
+function cprConfigurarChave(){
+  const atual = localStorage.getItem('adp_gemini_key') || '';
+  const nova = prompt('Cole sua chave da API Google Gemini para ativar análise automática de compras:\n\nObtente gratuitamente em: aistudio.google.com → Get API Key', atual);
+  if(nova === null) return;
+  localStorage.setItem('adp_gemini_key', nova.trim());
+  // Atualiza ícone
+  cprAtualizarIaStatus();
+  if(nova.trim()) alert('✅ Chave salva! A análise IA agora será automática em todas as novas solicitações.');
+}
+
+function cprAtualizarIaStatus(){
+  const btn = document.getElementById('cpr-ia-config-btn');
+  if(!btn) return;
+  const tem = !!localStorage.getItem('adp_gemini_key');
+  btn.textContent = tem ? '🤖 IA ativa' : '🤖 Configurar IA';
+  btn.style.color = tem ? '#166534' : 'var(--text2)';
+  btn.style.borderColor = tem ? '#86efac' : 'var(--border)';
+  btn.style.background  = tem ? '#f0fdf4' : 'transparent';
 }
 
 // ══════════════════════════════════════════════════════════════════════
