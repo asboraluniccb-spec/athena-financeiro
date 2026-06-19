@@ -1559,6 +1559,9 @@
             style="max-width:180px;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-weight:600;color:#166534;font-family:var(--font-body);background:var(--surface2)"
             oninput="v2AtualizarTotal()">
           <span style="font-size:10px;color:var(--text2)">extraído automaticamente · editável</span>
+          <span id="v2-preview-saldo-apos-inline" style="display:none;font-size:11px;color:var(--text2);border-left:1px solid var(--border);padding-left:10px;margin-left:2px">
+            Saldo após despesas: <strong id="v2-preview-saldo-apos-val" style="color:#166534">—</strong>
+          </span>
         </div>
 
         <!-- Tabela de despesas editável -->
@@ -1580,15 +1583,6 @@
           <span style="font-size:11px;font-weight:700;color:var(--text2);text-align:right;padding-right:8px">TOTAL DAS DESPESAS</span>
           <span id="v2-total-desp" style="font-size:14px;font-weight:800;color:var(--vinho);text-align:right">R$ 0,00</span>
           <span></span><span></span>
-        </div>
-
-        <!-- Preview: Saldo após despesas -->
-        <div id="v2-preview-saldo-apos" style="display:none;margin-top:10px;border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border:2px solid #166534;background:linear-gradient(135deg,#f0f9ff,#e8f4fd)">
-          <div>
-            <div id="v2-preview-saldo-label" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#166534;margin-bottom:2px">📊 Saldo após Despesas</div>
-            <div id="v2-preview-saldo-val" style="font-size:20px;font-weight:800;color:#166534;letter-spacing:-.5px">—</div>
-          </div>
-          <div id="v2-preview-saldo-icone" style="font-size:26px;opacity:.4">📊</div>
         </div>
 
         <!-- Botão salvar -->
@@ -8168,32 +8162,17 @@ function v2AtualizarTotal(){
   const el = document.getElementById('v2-total-desp');
   if(el) el.textContent = v2Fmt(t);
 
-  // Preview: Saldo após despesas
-  const preview = document.getElementById('v2-preview-saldo-apos');
-  if(!preview) return;
+  // Preview inline: Saldo após despesas
+  const inlineWrap = document.getElementById('v2-preview-saldo-apos-inline');
+  const inlineVal  = document.getElementById('v2-preview-saldo-apos-val');
+  if(!inlineWrap || !inlineVal) return;
   const saldoStr = document.getElementById('v2-saldo')?.value.trim() || '';
   const saldoVal = v2ParseVal(saldoStr);
-
-  if(!saldoStr || saldoVal === 0){
-    preview.style.display = 'none';
-    return;
-  }
-
+  if(!saldoStr || saldoVal === 0){ inlineWrap.style.display = 'none'; return; }
   const saldoApos = saldoVal - t;
-  const positivo  = saldoApos >= 0;
-  const cor       = positivo ? '#166534' : '#991b1b';
-  const bg        = positivo ? 'linear-gradient(135deg,#f0f9ff,#e8f4fd)' : 'linear-gradient(135deg,#fef2f2,#fff5f5)';
-  const icone     = positivo ? '📊' : '📉';
-  const emoji     = positivo ? '✅' : '⚠️';
-
-  preview.style.display = 'flex';
-  preview.style.background = bg;
-  preview.style.borderColor = cor;
-  document.getElementById('v2-preview-saldo-label').style.color = cor;
-  document.getElementById('v2-preview-saldo-label').textContent = emoji + ' Saldo após Despesas';
-  document.getElementById('v2-preview-saldo-val').style.color = cor;
-  document.getElementById('v2-preview-saldo-val').textContent = v2Fmt(saldoApos);
-  document.getElementById('v2-preview-saldo-icone').textContent = icone;
+  inlineWrap.style.display = '';
+  inlineVal.style.color = saldoApos >= 0 ? '#166534' : '#991b1b';
+  inlineVal.textContent = v2Fmt(saldoApos);
 }
 
 // ── Salvar movimentação ──
