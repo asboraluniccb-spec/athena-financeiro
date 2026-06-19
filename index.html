@@ -1665,7 +1665,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:11px;color:var(--text2)"><strong id="cpr-usuario-tag" style="color:var(--text)"></strong></span>
-          <button id="cpr-notif-btn" onclick="cprToggleNotif()" style="display:none;font-size:11px;padding:5px 12px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:var(--font-body)">🔔 <span id="cpr-notif-count">0</span></button>
+          <button id="cpr-notif-btn" onclick="cprToggleNotif()" style="font-size:11px;padding:5px 12px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:var(--font-body)">🔔<span id="cpr-notif-count" style="display:none;margin-left:4px;background:var(--vinho);color:var(--marfim);border-radius:10px;padding:0 5px;font-size:10px"></span></button>
           <button id="cpr-ia-config-btn" onclick="cprConfigurarChave()" style="font-size:11px;padding:5px 12px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:var(--font-body)">🤖 Configurar IA</button>
           <button onclick="cprSair()" style="font-size:11px;padding:5px 12px;background:none;color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:var(--font-body)">Sair</button>
         </div>
@@ -9314,16 +9314,13 @@ function cprNotifDoUsuario(){
 
 function cprAtualizarNotifBadge(){
   const notifs = cprNotifDoUsuario();
-  const btn   = document.getElementById('cpr-notif-btn');
-  const count = document.getElementById('cpr-notif-count');
-  if(!btn) return;
+  const count  = document.getElementById('cpr-notif-count');
+  if(!count) return;
   if(notifs.length > 0){
-    btn.style.display = '';
-    btn.style.borderColor = notifs.some(n=>n.tipo==='cpr_recusa') ? 'var(--red)' : '#86efac';
-    btn.style.color = notifs.some(n=>n.tipo==='cpr_recusa') ? 'var(--red)' : '#166534';
-    if(count) count.textContent = notifs.length;
+    count.textContent    = notifs.length;
+    count.style.display  = '';
   } else {
-    btn.style.display = 'none';
+    count.style.display  = 'none';
   }
 }
 
