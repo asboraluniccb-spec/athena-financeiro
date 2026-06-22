@@ -10036,11 +10036,6 @@ function snExportarPDF(){
     </tr>`;
   }
 
-  // ── Cenários comparativos ──
-  const cen1 = snFmt(valor*0.93);
-  const cen2E= snFmt(valor*0.30); const cen2P= snFmt((valor*0.70)/12); const cen2T= snFmt(valor);
-  const cen3P= snFmt(valor/6);
-
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
   <title>Simulação de Negociação — ${nome}</title>
   <style>
@@ -10058,11 +10053,6 @@ function snExportarPDF(){
     .kpi-box { background: #fdf9f4; border-radius: 7px; padding: 10px 14px; border: 1px solid #e0c9b8; text-align: center; }
     .kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: .3px; color: #6a1f30; margin-bottom: 5px; }
     .kpi-value { font-size: 15px; font-weight: 800; color: #8b2d42; }
-    .cen-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 6px; }
-    .cen-box { background: #f5ede2; border-radius: 7px; padding: 10px 14px; border: 1px solid #e0c9b8; }
-    .cen-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: #6a1f30; margin-bottom: 8px; }
-    .cen-row { font-size: 11px; color: #3d2a20; margin-bottom: 3px; }
-    .cen-val { font-weight: 700; color: #8b2d42; }
     table { width: 100%; border-collapse: collapse; }
     thead tr { background: #6a1f30; }
     thead th { padding: 9px 12px; text-align: left; color: #e0c9b8; font-size: 9px; font-weight: 400; letter-spacing: .28em; text-transform: uppercase; }
@@ -10089,25 +10079,6 @@ function snExportarPDF(){
     <div class="section">
       <div class="section-label">Resumo da Negociação</div>
       <div class="kpi-grid">${kpis}</div>
-    </div>
-    <div class="section">
-      <div class="section-label">Comparativo de Cenários</div>
-      <div class="cen-grid">
-        <div class="cen-box"><div class="cen-title">À Vista · 7% desconto</div>
-          <div class="cen-row">Original: <span class="cen-val">${snFmt(valor)}</span></div>
-          <div class="cen-row">Desconto: <span style="color:#991b1b">− ${snFmt(valor*0.07)}</span></div>
-          <div class="cen-row">Valor Final: <span class="cen-val">${cen1}</span></div>
-        </div>
-        <div class="cen-box"><div class="cen-title">A Prazo c/ Entrada (30% + 12x)</div>
-          <div class="cen-row">Entrada: <span class="cen-val">${cen2E}</span></div>
-          <div class="cen-row">12x de: <span class="cen-val">${cen2P}</span></div>
-          <div class="cen-row">Total: <span class="cen-val">${cen2T}</span></div>
-        </div>
-        <div class="cen-box"><div class="cen-title">A Prazo s/ Entrada (6x)</div>
-          <div class="cen-row">6x de: <span class="cen-val">${cen3P}</span></div>
-          <div class="cen-row">Total: <span class="cen-val">${snFmt(valor)}</span></div>
-        </div>
-      </div>
     </div>
     <div class="section">
       <div class="section-label">Detalhamento do Pagamento</div>
