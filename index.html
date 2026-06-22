@@ -1776,9 +1776,14 @@
   <div class="tab-content" id="tab-vendas">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <div class="section-title">Simulador de Negociação <span>Simule formas de pagamento sem gerar registros financeiros</span></div>
-      <button onclick="snLimpar()" style="display:flex;align-items:center;gap:8px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font-body);cursor:pointer">
-        ↺ Limpar
-      </button>
+      <div style="display:flex;gap:8px">
+        <button onclick="snExportarPDF()" style="display:flex;align-items:center;gap:8px;background:var(--vinho);color:var(--marfim);border:1px solid var(--vinho);border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font-body);cursor:pointer">
+          ⬇ PDF
+        </button>
+        <button onclick="snLimpar()" style="display:flex;align-items:center;gap:8px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font-body);cursor:pointer">
+          ↺ Limpar
+        </button>
+      </div>
     </div>
 
     <div style="display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start">
@@ -9928,6 +9933,210 @@ function snCalcPrazo(valor){
     <td style="padding:10px 14px;text-align:right;color:var(--green);font-size:14px">${snFmt(totalGeral)}</td>
     <td></td>`;
   tbody.appendChild(tfoot);
+}
+
+function snExportarPDF(){
+  const valor = parseFloat(document.getElementById('sn-valor')?.value)||0;
+  if(valor <= 0){ alert('Informe o valor do tratamento antes de exportar.'); return; }
+
+  const nome     = document.getElementById('sn-nome')?.value.trim() || 'Paciente não identificado';
+  const dataHoje = new Date().toLocaleDateString('pt-BR');
+  const mod      = _snMod || 'avista-nf';
+
+  // ── Coleta dados por modalidade ──
+  let resumoMod = '', kpis = '', linhasTabela = '';
+
+  if(mod === 'avista-nf' || mod === 'avista-snf'){
+    const descId = mod==='avista-nf' ? 'sn-nf-desc' : 'sn-snf-desc';
+    const desc   = parseFloat(document.getElementById(descId)?.value)||0;
+    const final  = valor * (1 - desc/100);
+    const label  = mod==='avista-nf' ? 'À Vista com Nota Fiscal' : 'À Vista sem Nota Fiscal';
+    resumoMod = label;
+    kpis = `
+      <div class="kpi-box"><div class="kpi-label">Valor Original</div><div class="kpi-value" style="color:#991b1b">${snFmt(valor)}</div></div>
+      <div class="kpi-box"><div class="kpi-label">Desconto</div><div class="kpi-value" style="color:#854d0e">− ${snFmt(valor*desc/100)} (${desc}%)</div></div>
+      <div class="kpi-box"><div class="kpi-label">Valor Final</div><div class="kpi-value" style="color:#166534">${snFmt(final)}</div></div>
+      <div class="kpi-box"><div class="kpi-label">Modalidade</div><div class="kpi-value" style="font-size:12px">${label}</div></div>`;
+    linhasTabela = `<tr><td colspan="4" style="padding:18px;text-align:center;color:#6a1f30;font-size:13px">Pagamento à vista · sem parcelas</td></tr>`;
+  } else {
+    // A Prazo — recalcula para montar a tabela
+    const entrada    = parseFloat(document.getElementById('sn-entrada')?.value)||0;
+    const nParcelas  = parseInt(document.getElementById('sn-parcelas')?.value)||1;
+    const taxaAno    = parseFloat(document.getElementById('sn-juros-taxa')?.value)||0;
+    const jurosMensal= snGetTaxaMensal();
+    const jurosModo  = document.getElementById('sn-juros-modo')?.value || 'proporcional';
+    const vencEntStr = document.getElementById('sn-venc-entrada')?.value || '';
+    const vencParcStr= document.getElementById('sn-venc-parcela')?.value || new Date().toISOString().slice(0,10);
+    const aParcelar  = Math.max(0, valor - entrada);
+
+    let parcelas = [];
+    if(jurosMensal > 0 && jurosModo === 'extra'){
+      const parcelaNormal  = aParcelar / nParcelas;
+      const jurosTotal     = aParcelar * jurosMensal * nParcelas;
+      const nParcelasJuros = Math.ceil(jurosTotal / parcelaNormal);
+      for(let i=0;i<nParcelas;i++)       parcelas.push({ valor: Math.round(parcelaNormal*100)/100, idx:i, tipo:'Parcela' });
+      for(let j=0;j<nParcelasJuros;j++){
+        const v = j<nParcelasJuros-1 ? Math.round(parcelaNormal*100)/100 : Math.round((jurosTotal-parcelaNormal*(nParcelasJuros-1))*100)/100;
+        parcelas.push({ valor:v, idx:nParcelas+j, tipo:'Juros' });
+      }
+    } else {
+      let valorParc = jurosMensal > 0
+        ? aParcelar*(jurosMensal*Math.pow(1+jurosMensal,nParcelas))/(Math.pow(1+jurosMensal,nParcelas)-1)
+        : aParcelar/nParcelas;
+      valorParc = Math.round(valorParc*100)/100;
+      for(let i=0;i<nParcelas;i++){
+        const v = i===nParcelas-1&&jurosMensal===0 ? Math.round((aParcelar-valorParc*(nParcelas-1))*100)/100 : valorParc;
+        parcelas.push({ valor:v, idx:i, tipo:'Parcela' });
+      }
+    }
+
+    const totalParcelas = parcelas.reduce((s,p)=>s+p.valor,0);
+    const totalGeral    = entrada + totalParcelas;
+    const jurosLabel    = taxaAno > 0 ? `${taxaAno}% a.a.` : 'Sem juros';
+    resumoMod = 'A Prazo';
+
+    kpis = `
+      <div class="kpi-box"><div class="kpi-label">Valor do Tratamento</div><div class="kpi-value" style="color:#991b1b">${snFmt(valor)}</div></div>
+      <div class="kpi-box"><div class="kpi-label">Entrada</div><div class="kpi-value" style="color:#854d0e">${snFmt(entrada)}</div></div>
+      <div class="kpi-box"><div class="kpi-label">Parcela</div><div class="kpi-value">${snFmt(parcelas[0]?.valor||0)}</div></div>
+      <div class="kpi-box"><div class="kpi-label">Total a Receber</div><div class="kpi-value" style="color:#166534">${snFmt(totalGeral)}</div></div>`;
+
+    // Linha de entrada
+    if(entrada > 0){
+      linhasTabela += `<tr style="background:#f0fdf4">
+        <td style="padding:8px 12px;color:#166534">—</td>
+        <td style="padding:8px 12px">${vencEntStr ? new Date(vencEntStr+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+        <td style="padding:8px 12px;text-align:right;font-weight:700;color:#166534">${snFmt(entrada)}</td>
+        <td style="padding:8px 12px"><span style="background:#d1fae5;color:#166534;padding:2px 8px;border-radius:4px;font-weight:700;font-size:10px">Entrada</span></td>
+      </tr>`;
+    }
+    // Parcelas
+    parcelas.forEach((p, idx) => {
+      const vencDt = snAddMes(vencParcStr, p.idx);
+      const dtFmt  = new Date(vencDt+'T12:00:00').toLocaleDateString('pt-BR');
+      const isLast = idx===parcelas.length-1;
+      const isJuros= p.tipo==='Juros';
+      const bg = isLast ? 'background:#f9f5f0;font-weight:700' : idx%2===0 ? '' : 'background:#fdf9f4';
+      const badgeBg = isJuros ? 'background:#fef3c7;color:#92400e' : 'background:#f1f5f9;color:#64748b';
+      linhasTabela += `<tr style="${bg};border-bottom:1px solid #e0c9b8">
+        <td style="padding:8px 12px;color:#6a1f30">${p.idx+1}</td>
+        <td style="padding:8px 12px">${dtFmt}</td>
+        <td style="padding:8px 12px;text-align:right;font-weight:600;color:#8b2d42">${snFmt(p.valor)}</td>
+        <td style="padding:8px 12px"><span style="padding:2px 8px;border-radius:4px;font-weight:700;font-size:10px;${badgeBg}">${p.tipo}</span></td>
+      </tr>`;
+    });
+    // Rodapé tabela
+    linhasTabela += `<tr style="background:#f5ede2;font-weight:700;border-top:2px solid #c4955a">
+      <td colspan="2" style="padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#6a1f30">
+        ${entrada>0?`Entrada ${snFmt(entrada)} + `:''}${parcelas.length} parcela${parcelas.length!==1?'s':''}
+        · Juros: ${jurosLabel}
+      </td>
+      <td style="padding:9px 12px;text-align:right;color:#166534;font-size:14px">${snFmt(totalGeral)}</td>
+      <td></td>
+    </tr>`;
+  }
+
+  // ── Cenários comparativos ──
+  const cen1 = snFmt(valor*0.93);
+  const cen2E= snFmt(valor*0.30); const cen2P= snFmt((valor*0.70)/12); const cen2T= snFmt(valor);
+  const cen3P= snFmt(valor/6);
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Simulação de Negociação — ${nome}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a0f0a; background: #fff; }
+    .header { background: #6a1f30; color: #fdf9f4; padding: 22px 28px 18px; border-bottom: 3px solid #c4955a; }
+    .logo { font-size: 22px; letter-spacing: .25em; text-transform: uppercase; font-weight: 300; margin-bottom: 2px; }
+    .logo-sub { font-size: 10px; letter-spacing: .28em; text-transform: uppercase; opacity: .75; }
+    .doc-title { font-size: 14px; margin-top: 10px; opacity: .9; letter-spacing: .06em; }
+    .body { padding: 22px 28px; }
+    .section { margin-bottom: 20px; }
+    .section-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #6a1f30; border-bottom: 1px solid #e0c9b8; padding-bottom: 5px; margin-bottom: 12px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+    .kpi-box { background: #fdf9f4; border-radius: 7px; padding: 10px 14px; border: 1px solid #e0c9b8; text-align: center; }
+    .kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: .3px; color: #6a1f30; margin-bottom: 5px; }
+    .kpi-value { font-size: 15px; font-weight: 800; color: #8b2d42; }
+    .cen-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 6px; }
+    .cen-box { background: #f5ede2; border-radius: 7px; padding: 10px 14px; border: 1px solid #e0c9b8; }
+    .cen-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: #6a1f30; margin-bottom: 8px; }
+    .cen-row { font-size: 11px; color: #3d2a20; margin-bottom: 3px; }
+    .cen-val { font-weight: 700; color: #8b2d42; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: #6a1f30; }
+    thead th { padding: 9px 12px; text-align: left; color: #e0c9b8; font-size: 9px; font-weight: 400; letter-spacing: .28em; text-transform: uppercase; }
+    thead th:nth-child(3) { text-align: right; }
+    .assinatura { margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+    .assin-line { border-top: 1px solid #3d2a20; padding-top: 6px; font-size: 10px; color: #6a1f30; text-align: center; }
+    .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #e0c9b8; display: flex; justify-content: space-between; font-size: 10px; color: #6a1f30; }
+  </style>
+  </head><body>
+  <div class="header">
+    <div class="logo">Athena</div>
+    <div class="logo-sub">Controle Financeiro</div>
+    <div class="doc-title">Simulação de Negociação — ${resumoMod}</div>
+  </div>
+  <div class="body">
+    <div class="section">
+      <div class="section-label">Identificação</div>
+      <div class="kpi-grid">
+        <div class="kpi-box" style="grid-column:span 2;text-align:left"><div class="kpi-label">Paciente</div><div class="kpi-value" style="font-size:17px">${nome.toUpperCase()}</div></div>
+        <div class="kpi-box"><div class="kpi-label">Modalidade</div><div class="kpi-value" style="font-size:12px">${resumoMod}</div></div>
+        <div class="kpi-box"><div class="kpi-label">Data da Simulação</div><div class="kpi-value" style="font-size:13px">${dataHoje}</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Resumo da Negociação</div>
+      <div class="kpi-grid">${kpis}</div>
+    </div>
+    <div class="section">
+      <div class="section-label">Comparativo de Cenários</div>
+      <div class="cen-grid">
+        <div class="cen-box"><div class="cen-title">À Vista · 7% desconto</div>
+          <div class="cen-row">Original: <span class="cen-val">${snFmt(valor)}</span></div>
+          <div class="cen-row">Desconto: <span style="color:#991b1b">− ${snFmt(valor*0.07)}</span></div>
+          <div class="cen-row">Valor Final: <span class="cen-val">${cen1}</span></div>
+        </div>
+        <div class="cen-box"><div class="cen-title">A Prazo c/ Entrada (30% + 12x)</div>
+          <div class="cen-row">Entrada: <span class="cen-val">${cen2E}</span></div>
+          <div class="cen-row">12x de: <span class="cen-val">${cen2P}</span></div>
+          <div class="cen-row">Total: <span class="cen-val">${cen2T}</span></div>
+        </div>
+        <div class="cen-box"><div class="cen-title">A Prazo s/ Entrada (6x)</div>
+          <div class="cen-row">6x de: <span class="cen-val">${cen3P}</span></div>
+          <div class="cen-row">Total: <span class="cen-val">${snFmt(valor)}</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Detalhamento do Pagamento</div>
+      <table>
+        <thead><tr>
+          <th style="width:40px">#</th>
+          <th>Vencimento</th>
+          <th style="text-align:right">Valor</th>
+          <th>Origem</th>
+        </tr></thead>
+        <tbody>${linhasTabela}</tbody>
+      </table>
+    </div>
+    <div class="assinatura">
+      <div class="assin-line">Assinatura do Paciente</div>
+      <div class="assin-line">Responsável — Oral Unic</div>
+    </div>
+    <div class="footer">
+      <span>Athena — Controle Financeiro · Documento gerado em ${dataHoje}</span>
+      <span>Simulação — não constitui contrato</span>
+    </div>
+  </div>
+  <script>window.onload=()=>{ window.print(); }<\/script>
+  </body></html>`;
+
+  const blob = new Blob([html], {type:'text/html'});
+  const url  = URL.createObjectURL(blob);
+  const win  = window.open(url,'_blank');
+  if(!win) alert('Permita pop-ups para exportar o PDF.');
 }
 
 function snAtualizarSimAtual(info){
